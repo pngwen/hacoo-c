@@ -1,0 +1,284 @@
+/* File: hacoo.c
+ * Purpose: Implementation of the hacoo sparse tensor library.
+ */
+#include "hacoo.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* Helper Function Prototypes */
+static void hacoo_free_buckets(struct hacoo_tensor *t);
+static unsigned long long hacoo_morton(unsigned int n, unsigned int *index);
+static size_t hacoo_bucket_index(struct hacoo_tensor *t,
+                                 unsigned long long morton);
+static void hacoo_compute_params(struct hacoo_tensor *t);
+static struct hacoo_bucket *hacoo_bucket_search(struct hacoo_bucket *b,
+                                                unsigned long long morton);
+static size_t hacoo_max_bits(unsigned int n);
+
+/* Allocation and deallocation functions */
+struct hacoo_tensor *hacoo_alloc(unsigned int ndims, unsigned int *dims,
+                                 size_t nbuckets, unsigned int load) {
+  struct hacoo_tensor *t = malloc(sizeof(struct hacoo_tensor));
+
+  /* handle allocation error */
+  if (t == NULL) {
+    goto error;
+  }
+
+  /* initialize tensor fields */
+  t->ndims = ndims;
+  t->dims = calloc(1, sizeof(unsigned int) * ndims);
+  if (!t->dims) {
+    goto error;
+  }
+  memcpy(t->dims, dims, sizeof(unsigned int) * ndims);
+  t->nbuckets = nbuckets;
+  t->load = load;
+  t->buckets = calloc(nbuckets, sizeof(struct hacoo_bucket *));
+  if (!t->buckets) {
+    goto error;
+  }
+  hacoo_compute_params(t);
+  return t;
+
+error:
+  if (t) {
+    hacoo_free(t);
+  }
+  return NULL;
+}
+
+void hacoo_free(struct hacoo_tensor *t) {
+  if (t->dims) {
+    free(t->dims);
+  }
+  if (t->buckets) {
+    hacoo_free_buckets(t);
+  }
+  free(t);
+}
+
+/* Access functions */
+void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value) {
+  unsigned long long morton = hacoo_morton(t->ndims, index);
+  size_t i = hacoo_bucket_index(t, morton);
+  struct hacoo_bucket *b;
+
+  //see if it already exists in the bucket
+  b = hacoo_bucket_search(t->buckets[i], morton);
+
+  // If bucket is unoccupied, create new bucket
+  if (!b) {
+    b = hacoo_new_bucket();  // Create a new bucket
+    if (t->buckets[i] == NULL) {
+      // If the bucket at index i is empty, place the new bucket there
+      t->buckets[i] = b;
+    } else {
+      // If there is already a bucket chain, append to the end of the chain
+      struct hacoo_bucket *last = t->buckets[i];
+      while (last->next) {
+        last = last->next;
+      }
+      last->next = b;  // Append the new bucket to the end of the chain
+    }
+    b->morton = morton;  // Set Morton code on the new bucket
+    t->nnz++;  // Increment the number of non-zero elements
+  }
+
+  b->value = value;  // Set the value for the bucket
+}
+
+double hacoo_get(struct hacoo_tensor *t, unsigned int *index) {
+  unsigned long long morton = hacoo_morton(t->ndims, index);
+  size_t i = hacoo_bucket_index(t, morton);
+  struct hacoo_bucket *b = hacoo_bucket_search(t->buckets[i], morton);
+  if (b) {
+    return b->value;
+  }
+
+  return 0.0;
+}
+
+/* extract the index from a bucket */
+void hacoo_extract_index(struct hacoo_bucket *b, unsigned int n,
+                         unsigned int *index) {
+  size_t max_bits = hacoo_max_bits(n);
+
+  // Initialize the index array
+  for (unsigned int i = 0; i < n; i++) {
+    index[i] = 0;
+  }
+  // De-interleave the morton code bits into the index array
+  for (unsigned int bit = 0; bit < max_bits; bit++) {
+    for (unsigned int i = 0; i < n; i++) {
+      index[i] |= ((b->morton >> (bit * n + i)) & 1) << bit;
+    }
+  }
+}
+
+/* Helper function implementations. */
+static void hacoo_free_buckets(struct hacoo_tensor *t) {
+  struct hacoo_bucket *cur, *next;
+  int i;
+
+  for (i = 0; i < t->nbuckets; i++) {
+    cur = t->buckets[i];
+    while (cur) {
+      next = cur->next;
+      free(cur);
+      cur = next;
+    }
+  }
+
+  free(t->buckets);
+}
+
+static unsigned long long hacoo_morton(unsigned int n, unsigned int *index) {
+  unsigned long long m = 0;
+  size_t max_bits = hacoo_max_bits(n);
+
+  for (unsigned int bit = 0; bit < max_bits; bit++) {
+    for (unsigned int i = 0; i < n; i++) {
+      m |= ((index[i] >> bit) & 1) << (bit * n + i);
+    }
+  }
+
+  return m;
+}
+
+static size_t hacoo_bucket_index(struct hacoo_tensor *t,
+                                 unsigned long long morton) {
+  unsigned long long hash = morton;
+
+  hash = hash + (hash << t->sx);
+  hash = hash ^ (hash >> t->sy);
+  hash = hash + (hash << t->sz);
+  return hash % t->nbuckets;
+}
+
+static void hacoo_compute_params(struct hacoo_tensor *t) {
+  unsigned int bits;
+
+  bits = ceil(log(t->nbuckets) / log(2));
+  t->sx = ceil(bits / 8) - 1;
+  t->sy = 4 * t->sx - 1;
+  if (t->sy < 1) {
+    t->sy = 1;
+  }
+  t->sz = ceil(bits / 2);
+}
+
+static struct hacoo_bucket *hacoo_bucket_search(struct hacoo_bucket *b,
+                                                unsigned long long morton) {
+  for (; b; b = b->next) {
+    if (b->morton == morton) {
+      return b;
+    }
+  }
+  return NULL;
+}
+
+static size_t hacoo_max_bits(unsigned int n) {
+  size_t b1 = sizeof(unsigned long long) * 8 / n;
+  size_t b2 = sizeof(unsigned int) * 8;
+
+  return b1 < b2 ? b1 : b2;
+}
+
+/*Allocate a new hacoo bucket. Its next points to NULL if a next bucket does not
+ * exist. */
+struct hacoo_bucket *hacoo_new_bucket() {
+  struct hacoo_bucket *b;
+  b = calloc(1, sizeof(struct hacoo_bucket));
+  b->next = NULL;
+  b->morton = 0;
+  b->value = 0;
+
+  return b;
+}
+
+/* Read the dimensions from stdin and build the tensor */
+struct hacoo_tensor *read_init() {
+  // Buffer to read the input line
+  char buffer[1024];
+  fgets(buffer, sizeof(buffer), stdin);
+
+  // Count the number of integers in the line
+  unsigned int count = 0;
+  for (char *p = buffer; *p; p++) {
+    if (*p == ' ')
+      count++;
+  }
+  count++;
+
+  // Allocate memory for the array of dimensions
+  unsigned int *dims = malloc(count * sizeof(unsigned int));
+  if (!dims)
+    return NULL;
+
+  // Parse the input line and store integers in the array
+  char *token = strtok(buffer, " ");
+  for (unsigned int i = 0; i < count; i++) {
+    dims[i] = strtoul(token, NULL, 10);
+    token = strtok(NULL, " ");
+  }
+
+  // Allocate the tensor using the parsed dimensions
+  struct hacoo_tensor *t = hacoo_alloc(count, dims, 128, 80);
+
+  // Free the allocated memory for the dimensions array
+  free(dims);
+
+  return t;
+}
+
+/* Read an entry from stdin */
+void read_entry(struct hacoo_tensor *t) {
+  int index[t->ndims];
+  double value;
+
+  /* read the index */
+  for (int i = 0; i < t->ndims; i++) {
+    if (feof(stdin))
+      return;
+    scanf("%u", &index[i]);
+  }
+
+  /* read the value */
+  if (feof(stdin))
+    return;
+  scanf("%lf", &value);
+
+  /* insert the value */
+  hacoo_set(t, index, value);
+}
+
+/* Print out information about the tensor */
+void print_status(struct hacoo_tensor *t) {
+  printf("nnz: %d nbuckets: %d\n", t->nnz, t->nbuckets);
+}
+
+/* Print the tensor hash table with COO listings */
+void print_tensor(struct hacoo_tensor *t) {
+  struct hacoo_bucket *b;
+  int index[t->ndims];
+
+  for (int i = 0; i < t->nbuckets; i++) {
+    // get the bucket pointer
+    if (!t->buckets[i])
+      continue;
+
+    // print the bucket heading
+    printf("\nBucket %d\n=============\n", i);
+    for (b = t->buckets[i]; b; b = b->next) {
+      hacoo_extract_index(b, t->ndims, index);
+      printf("0x%lx: ", b->morton);
+      for (int j = 0; j < t->ndims; j++) {
+        printf("%u ", index[j]);
+      }
+      printf("%f\n", b->value);
+    }
+  }
+}
