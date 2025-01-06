@@ -2,7 +2,7 @@ all: main
 
 CC = clang
 override CFLAGS += -g -Wno-everything -pthread -lm
-LDLIBS=-lm -lcunit
+LDLIBS=-lm -lcunit -fopenmp
 
 SRCS = $(shell find . -name '.ccls-cache' -type d -prune -o -type f -name '*.c' -print)
 HEADERS = $(shell find . -name '.ccls-cache' -type d -prune -o -type f -name '*.h' -print)

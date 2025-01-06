@@ -17,132 +17,120 @@ Returns:
 #include "mttkrp.h"
 #include "hacoo.h"
 #include "matrix.h"
+#include <omp.h>
 #include <stdio.h>
 
+#define NUM_THREADS 10
+
 matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
+
+  omp_set_num_threads(NUM_THREADS);
 
   // number of columns
   unsigned int fmax = u[0]->cols;
 
-  // create the result array
+  // create the global result array
   matrix_t *res = zeroes(h->dims[n], fmax);
 
-  // to hold current nnz's index
-  unsigned int *idx = (unsigned int *)malloc(sizeof(unsigned int) * h->ndims);
-  //printf("h->ndims: %d\n", h->ndims);
-  
-  // tind holds index at specific mode f
-  unsigned int *tind = (unsigned int *)malloc(sizeof(unsigned int) * h->nnz);
-  //printf("h->nnz: %d\n", h->nnz);
-  // to hold nnz values
-  double *t = (double *)malloc(sizeof(double) * h->nnz);
+// Parallelize the outer loop over factor matrix columns
+#pragma omp parallel
+  {
 
-  if (idx == NULL || tind == NULL || t == NULL) {
-    fprintf(stderr, "Error: Memory allocation failed.\n");
-    return NULL;
-  }
+    int thread_id = omp_get_thread_num(); // Get the current thread ID
 
-  struct hacoo_bucket *cur, *next;
+    if (thread_id == 0) {
+      int num_threads = omp_get_num_threads();
+      printf("Number of threads: %d\n", num_threads);
+    }
 
-  // go through each column
-  for (int f = 0; f < fmax; f++) {
-    //printf("fmax: %d\n", fmax);
-    int z = 0; // counter for which nnz we're on
+// go through each column
+#pragma omp for schedule(dynamic)
+    for (int f = 0; f < fmax; f++) {
+      // each thread gets its own cur, next pointers
+      // every thread should also get its own idx, tind, and t
+      // every thread should have a local result matrix to merge @ end
+      // each thread will get a column to compute, so it doesn't have
+      // to store the entire result matrix...
 
-    for (int m = 0; m < h->nbuckets; m++) { // go through every bucket
+      // to hold current nnz's index
+      unsigned int *idx =
+          (unsigned int *)malloc(sizeof(unsigned int) * h->ndims);
 
-      // if blank bucket, skip
-      if (h->buckets[m] == NULL) {
-        continue;
+      // tind holds index at specific mode f
+      unsigned int *tind =
+          (unsigned int *)malloc(sizeof(unsigned int) * h->nnz);
+
+      // to hold nnz values
+      double *t = (double *)malloc(sizeof(double) * h->nnz);
+
+      // create local result array
+      matrix_t *local_res = zeroes(h->dims[n], fmax);
+
+      if (idx == NULL || tind == NULL || t == NULL || local_res == NULL) {
+        fprintf(stderr, "Error: Memory allocation failed.\n");
+        free(idx);
+        free(tind);
+        free(t);
+        free(local_res);
+        // return NULL;
       }
 
-      // go through each element in that bucket
-      for (cur = h->buckets[m]; cur; cur = cur->next) {
-        // decode element in the bucket
-        hacoo_extract_index(cur, h->ndims, idx);
+      struct hacoo_bucket *cur, *next;
 
-        if (cur == NULL) {
-          fprintf(stderr, "Error: cur is NULL.\n");
-          return NULL;
+      int z = 0; // counter for which nnz we're on
+
+      for (int m = 0; m < h->nbuckets; m++) { // go through every bucket
+
+        // if blank bucket, skip
+        if (h->buckets[m] == NULL) {
+          continue;
         }
 
-        if (z >= h->nnz) {
-          fprintf(stderr,
-                  "Error: z exceeds the number of non-zero elements.\n");
-          return NULL;
-        }
+        // go through each element in that bucket
+        for (cur = h->buckets[m]; cur; cur = cur->next) {
+          // decode element in the bucket
+          hacoo_extract_index(cur, h->ndims, idx);
 
-        t[z] = cur->value;
-        tind[z] = idx[n];
+          t[z] = cur->value;
+          tind[z] = idx[n];
 
-        int b = 0;
-        /*
-        printf("index: ");
-        for (int k = 0; k < h->ndims; k++) {
-          printf("%d ", idx[k]);
-        }
-        printf("\n");
-        */
-        while (b < fmax) {
-          // skip the unfolded mode
-          if (b == n) {
-            b++;
-            continue;
+          int b = 0;
+
+          while (b < fmax) {
+            // skip the unfolded mode
+            if (b == n) {
+              b++;
+              continue;
+            }
+
+            // multiply the nnz by each factor
+            t[z] *= u[b]->vals[idx[b]][f];
+
+            b++; // advance to next factor matrix
           }
+          // Accumulate into the local result matrix
+          local_res->vals[tind[z]][f] += t[z];
+          z++; // advance to next nnz
+        }      // end for every element in that bucket
+      }        // end for every bucket
 
-          //printf("b: %d\n", b);
-          if (idx[b] >= u[b]->rows) {
-            fprintf(stderr,
-                    "Error: idx[%d] out of bounds for u[%d] with rows %d.\n", b,
-                    b, u[b]->rows);
-            return NULL;
+      // accumulate m(:,f)
+      // Reduce local result into global result
+#pragma omp critical
+      {
+        for (int i = 0; i < res->rows; i++) {
+          for (int j = 0; j < res->cols; j++) {
+            res->vals[i][j] += local_res->vals[i][j];
           }
-
-          // multiply the nnz by each factor
-          //printf("vals[idx[%d]][%d]: %f\n", z, f, u[b]->vals[idx[b]][f]);
-          t[z] *= u[b]->vals[idx[b]][f];
-
-          /*// print current t for debugging
-          printf("t = ");
-          for (int j = 0; j < h->ndims; j++) {
-            printf("%f ", t[j]);
-          }
-          printf("\n");
-          */
-
-          b++; // advance to next factor matrix
         }
-        z++; // advance to next nnz
-        //printf("advancing to next nnz...\n");
-      }
-    }
-    //printf("accumulate m(:,f)...\n");
-    /*
-    printf("tind:\n");
-    //print tind
-    for(int p = 0;p<h->nnz;p++){
-      printf("%d ",tind[p]);
-    }
-    */
-    
-    // accumulate m(:,f)
-    for (int z = 0; z < h->nnz; z++) {
-      //printf("z: %d, tind[z]: %d, res->rows: %d\n", z, tind[z], res->rows);  // Debug: print indices and sizes
-      if (tind[z] >= res->rows) {
-        fprintf(stderr, "Error: tind[z] (%d) out of bounds for res with rows %d\n", tind[z], res->rows);
-        return NULL;
-      }
-      
-      res->vals[tind[z]][f] += t[z];
-      // Debugging: print the updated result
-      //printf("res[%d][%d] updated to: %f\n", tind[z], f, res->vals[tind[z]][f]);
-    }
-  } // end for every column
-
-  // free arrays
-  free(idx);
-  free(tind);
-  free(t);
+      } // end critical
+      // free arrays
+      free(idx);
+      free(tind);
+      free(t);
+      free(local_res);
+    } // end for every column
+  }   // end parallel
 
   return res;
 }
