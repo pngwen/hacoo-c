@@ -16,5 +16,8 @@ main-debug: $(SRCS) $(HEADERS)
 hacoo_test: hacoo.o hacoo_test.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
+candecomp: candecomp.o hacoo.o matrix.o cpd.o mttkrp.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+
 clean:
 	rm -f main main-debug hacoo_test *.o

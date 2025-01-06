@@ -278,3 +278,106 @@ void sub_matrix(matrix_t *res, matrix_t *a, matrix_t *b) {
     }
   }
 }
+
+void mul_matrix(matrix_t *res, matrix_t *a, matrix_t *b)
+{
+    for (int i = 0; i < a->rows; i++)
+    {
+        for (int j = 0; j < b->cols; j++)
+        {
+            res->vals[i][j] = 0;
+            for (int k = 0; k < a->cols; k++)
+            {
+                res->vals[i][j] += a->vals[i][k] * b->vals[k][j];
+            }
+        }
+    }
+}
+
+void mul_transpose_matrix(matrix_t *res, matrix_t *a, matrix_t *b)
+{
+    for (int i = 0; i < a->cols; i++)
+    {
+        for (int j = 0; j < b->cols; j++)
+        {
+            res->vals[i][j] = 0;
+            for (int k = 0; k < a->rows; k++)
+            {
+                res->vals[i][j] += a->vals[k][i] * b->vals[k][j];
+            }
+        }
+    }
+}
+
+void invert_matrix(matrix_t *res, matrix_t *a)
+{
+    // Check if the matrix is square
+    if (a->rows != a->cols)
+    {
+        //TODO: better error handling
+        return;
+    }
+
+    // Create a temporary matrix to store the augmented matrix
+    matrix_t *augmented = zeroes(a->rows, 2 * a->cols);
+
+    // Copy the original matrix into the left half of the augmented matrix
+    for (int i = 0; i < a->rows; i++)
+    {
+        for (int j = 0; j < a->cols; j++)
+        {
+            augmented->vals[i][j] = a->vals[i][j];
+        }
+    }
+
+    // Fill the right half of the augmented matrix with the identity matrix
+    for (int i = 0; i < a->rows; i++)
+    {
+        for (int j = a->cols; j < 2 * a->cols; j++)
+        {
+            augmented->vals[i][j] = (i == j - a->cols) ? 1 : 0;
+        }
+    }
+
+    // Perform row operations to transform the left half of the augmented matrix into the identity matrix
+    for (int i = 0; i < a->rows; i++)
+    {
+        double pivot = augmented->vals[i][i];
+        if (pivot == 0)
+        {
+            // TODO: better error handling
+            free_matrix(augmented);
+            return;
+        }
+
+        // Divide the row by the pivot to make the diagonal element 1
+        for (int j = 0; j < 2 * a->cols; j++)
+        {
+            augmented->vals[i][j] /= pivot;
+        }
+
+        // Subtract multiples of the row from the other rows to make the rest of the column zero
+        for (int k = 0; k < a->rows; k++)
+        {
+            if (k == i)
+            {
+                continue;
+            }
+
+            double factor = augmented->vals[k][i];
+            for (int j = 0; j < 2 * a->cols; j++)
+            {
+                augmented->vals[k][j] -= factor * augmented->vals[i][j];
+            }
+        }
+    }
+
+    // Copy the right half of the augmented matrix into the result matrix
+    for (int i = 0; i < a->rows; i++)
+    {
+        for (int j = 0; j < a->cols; j++)
+        {
+            res->vals[i][j] = augmented->vals[i][j + a->cols];
+        }
+    }
+}

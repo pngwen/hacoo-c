@@ -4,6 +4,7 @@
 #ifndef HACOO_H
 #define HACOO_H
 #include <stddef.h>
+#include <stdio.h>
 
 struct hacoo_bucket {
   unsigned long long morton;
@@ -44,6 +45,15 @@ struct hacoo_tensor *read_init();
 
 /* Read an entry from stdin */
 void read_entry(struct hacoo_tensor *t);
+
+/* Read a tensor from a tns file */
+struct hacoo_tensor *read_tensor_file(FILE *file);
+
+/* Initialize a tensor from a file */
+struct hacoo_tensor *file_init(FILE *file);
+
+/* Read an entry from a file */
+void file_entry(struct hacoo_tensor *t, FILE *file);
 
 /* Print out information about the tensor */
 void print_status(struct hacoo_tensor *t);
