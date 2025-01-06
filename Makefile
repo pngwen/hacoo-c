@@ -1,8 +1,8 @@
 all: main
 
 CC = clang
-override CFLAGS += -g -Wno-everything -pthread -lm
-LDLIBS=-lm -lcunit
+override CFLAGS += -g -Wno-everything -pthread 
+LDLIBS=-lm
 
 SRCS = $(shell find . -name '.ccls-cache' -type d -prune -o -type f -name '*.c' -print)
 HEADERS = $(shell find . -name '.ccls-cache' -type d -prune -o -type f -name '*.h' -print)
@@ -14,6 +14,9 @@ main-debug: $(SRCS) $(HEADERS)
 	$(CC) $(CFLAGS) -O0 $(SRCS) -o "$@" $(LDLIBS)
 
 hacoo_test: hacoo.o hacoo_test.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+
+candecomp: candecomp.o hacoo.o matrix.o cpd.o mttkrp.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 clean:

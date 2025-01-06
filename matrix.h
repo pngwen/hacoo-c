@@ -58,6 +58,15 @@ void add_matrix(matrix_t *res, matrix_t *a, matrix_t *b);
 /* Subtract two matrices RES = A - B. C must be allocated to the correct dimensions */
 void sub_matrix(matrix_t *res, matrix_t *a, matrix_t *b);
 
+/* Perform the matrix multiplication RES = A * B */
+void mul_matrix(matrix_t *res, matrix_t *a, matrix_t *b);
+
+/* Perform the matrix multiplication RES = A' * B */
+void mul_transpose_matrix(matrix_t *res, matrix_t *a, matrix_t *b);
+
+/* Calculate the inverse of the matrix RES = A^-1 */
+void invert_matrix(matrix_t *res, matrix_t *a);
+
 /* basic test for matrix functions */
 void matrix_test();
 

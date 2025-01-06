@@ -201,9 +201,31 @@ struct hacoo_bucket *hacoo_new_bucket() {
 
 /* Read the dimensions from stdin and build the tensor */
 struct hacoo_tensor *read_init() {
+  return file_init(stdin);
+}
+
+/* Read an entry from stdin */
+void read_entry(struct hacoo_tensor *t) {
+  file_entry(t, stdin);
+}
+
+/* Read a tensor from a tns file */
+struct hacoo_tensor *read_tensor_file(FILE *file)
+{
+  struct hacoo_tensor *t = file_init(file);
+
+  while(!feof(file)) {
+    file_entry(t, file);
+  }
+
+  return t;
+}
+
+/* Initialize a tensor from a file */
+struct hacoo_tensor *file_init(FILE *file) {
   // Buffer to read the input line
   char buffer[1024];
-  fgets(buffer, sizeof(buffer), stdin);
+  fgets(buffer, sizeof(buffer), file);
 
   // Count the number of integers in the line
   unsigned int count = 0;
@@ -234,8 +256,8 @@ struct hacoo_tensor *read_init() {
   return t;
 }
 
-/* Read an entry from stdin */
-void read_entry(struct hacoo_tensor *t) {
+/* Read an entry from a file */
+void file_entry(struct hacoo_tensor *t, FILE *file) {
   int index[t->ndims];
   double value;
 
@@ -243,13 +265,13 @@ void read_entry(struct hacoo_tensor *t) {
   for (int i = 0; i < t->ndims; i++) {
     if (feof(stdin))
       return;
-    scanf("%u", &index[i]);
+    fscanf(file, "%u", &index[i]);
   }
 
   /* read the value */
   if (feof(stdin))
     return;
-  scanf("%lf", &value);
+  fscanf(file, "%lf", &value);
 
   /* insert the value */
   hacoo_set(t, index, value);
