@@ -29,6 +29,9 @@ struct hacoo_tensor *hacoo_alloc(unsigned int ndims, unsigned int *dims,
                                  size_t nbuckets, unsigned int load);
 void hacoo_free(struct hacoo_tensor *t);
 
+/* Rehash tensor that has exceeded load limit to new tensor */
+void hacoo_rehash(struct hacoo_tensor *t);
+
 /* Access functions */
 void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value);
 double hacoo_get(struct hacoo_tensor *t, unsigned int *index);
@@ -60,4 +63,10 @@ void print_status(struct hacoo_tensor *t);
 
 /* Print the tensor hash table with COO listings */
 void print_tensor(struct hacoo_tensor *t);
+
+/* Save tensor to binary file (for testing purposes only) */
+int save_hacoo_tensor_to_file(const struct hacoo_tensor *tensor, const char *filename);
+
+struct hacoo_tensor *load_hacoo_tensor_from_file(const char *filename);
+
 #endif

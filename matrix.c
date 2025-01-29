@@ -1,6 +1,7 @@
 #include "matrix.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h> // for time
 #include <math.h>  // For fabs()
 
 // Define an appropriate epsilon value for comparing equivalent matrices

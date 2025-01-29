@@ -7,4 +7,7 @@
 /* Perform MTTKRP on sparse HaCOO tensor t */
 matrix_t *mttkrp(struct hacoo_tensor *t, matrix_t **u, unsigned int n);
 
+/* Serial version of MTTKRP */
+matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n);
+
 void mttkrp_test(struct hacoo_tensor *t);

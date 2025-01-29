@@ -1,23 +1,18 @@
-all: main
+TARGETS = hacoo_test candecomp
 
-CC = clang
-override CFLAGS += -g -Wno-everything -pthread -lm
-LDLIBS=-lm -lcunit -fopenmp
+CC ?= clang
+CFLAGS += -g -Wno-everything -pthread -lm `pkg-config --cflags cunit` -fopenmp
+LDLIBS+=-lm -fopenmp `pkg-config --libs cunit`
 
-SRCS = $(shell find . -name '.ccls-cache' -type d -prune -o -type f -name '*.c' -print)
-HEADERS = $(shell find . -name '.ccls-cache' -type d -prune -o -type f -name '*.h' -print)
+HACOO = hacoo.o cpd.o matrix.o mttkrp.o
 
-main: $(SRCS) $(HEADERS)
-	$(CC) $(CFLAGS) $(SRCS) -o "$@" $(LDLIBS)
+all: hacoo_test candecomp
 
-main-debug: $(SRCS) $(HEADERS)
-	$(CC) $(CFLAGS) -O0 $(SRCS) -o "$@" $(LDLIBS)
-
-hacoo_test: hacoo.o hacoo_test.o
+hacoo_test: hacoo_test.o $(HACOO)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-candecomp: candecomp.o hacoo.o matrix.o cpd.o mttkrp.o
+candecomp: candecomp.o $(HACOO) 
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 clean:
-	rm -f main main-debug hacoo_test *.o
+	rm -f $(TARGETS) *.o
