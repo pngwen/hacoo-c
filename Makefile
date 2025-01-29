@@ -1,8 +1,8 @@
 TARGETS = hacoo_test candecomp
 
-CC = clang
-override CFLAGS += -g -Wno-everything -pthread -lm
-LDLIBS=-lm -lcunit -fopenmp
+CC ?= clang
+override CFLAGS += -g -Wno-everything -pthread -lm `pkg-config --cflags cunit` -fopenmp
+LDLIBS+=-lm -fopenmp `pkg-config --libs cunit`
 
 HACOO = hacoo.o cpd.o matrix.o mttkrp.o
 
