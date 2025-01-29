@@ -58,6 +58,7 @@ void CUnit_mttkrp() {
    global_argv[2] - name of file to read mttkrp results from
    */
 void mttkrp_test_par() {
+void mttkrp_test_par() {
 
   CU_ASSERT_PTR_NOT_NULL(global_argv);
   CU_ASSERT_EQUAL(global_argc, 3); // Number of arguments
@@ -80,6 +81,7 @@ void mttkrp_test_par() {
   struct hacoo_tensor *t = read_init();
   while (!feof(stdin)) {
     read_entry(t);
+    //print_status(t);
     //print_status(t);
   }
 
@@ -198,10 +200,28 @@ void mttkrp_test_par() {
     }
     // free tensor
     hacoo_free(t);
+    // for every mttkrp answer compare answer with this libarary's mttkrp answer
+    for (int i = 0; i < matrix_count; i++) {
+      //printf("HaCOO-C Answer:\n");
+      //print_matrix(hacoo_mttkrp[i]);
+      printf("HaCOO-C Answer:\n");
+      print_matrix(hacoo_mttkrp[i]);
+      printf("MATLAB Answer:\n");
+      print_matrix(mttkrp_ans[i]);
+      CU_ASSERT(are_matrices_equal(mttkrp_ans[i], hacoo_mttkrp[i]));
+    }
+    // free tensor
+    hacoo_free(t);
 
     // Free factor matrices
     free_matrices(factor_matrices, matrix_count);
+    // Free factor matrices
+    free_matrices(factor_matrices, matrix_count);
 
+    // Free mttkrp answer matrices
+    free_matrices(mttkrp_ans, matrix_count);
+    free_matrices(hacoo_mttkrp, matrix_count);
+  }
     // Free mttkrp answer matrices
     free_matrices(mttkrp_ans, matrix_count);
     free_matrices(hacoo_mttkrp, matrix_count);
