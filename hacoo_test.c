@@ -1,3 +1,4 @@
+
 /*
  * A simple test program for the hacoo sparse tensor library.
  */
@@ -21,24 +22,24 @@ char **global_argv;
 int global_argc;
 
 int main(int argc, char *argv[]) {
-/*
+
   // read the tensor in
   struct hacoo_tensor *t = read_init();
   while (!feof(stdin)) {
     read_entry(t);
-    print_status(t);
-  }*/
+    //print_status(t);
+  }
 
   //Print tensor
-  //print_tensor(t);
-  //hacoo_free(t);
+  print_tensor(t);
+  hacoo_free(t);
 
-  // Store the command-line arguments in the global array
+  /*// Store the command-line arguments in the global array
   global_argc = argc;
   global_argv = argv;
 
   //CUnit_mttkrp_ser();
-  CUnit_mttkrp();
+  CUnit_mttkrp();*/
 }
 
 /*MTTKRP CUnit Test*/
@@ -57,7 +58,6 @@ void CUnit_mttkrp() {
    global_argv[1] - name of file to read factor matrices from
    global_argv[2] - name of file to read mttkrp results from
    */
-void mttkrp_test_par() {
 void mttkrp_test_par() {
 
   CU_ASSERT_PTR_NOT_NULL(global_argv);
@@ -218,10 +218,6 @@ void mttkrp_test_par() {
     // Free factor matrices
     free_matrices(factor_matrices, matrix_count);
 
-    // Free mttkrp answer matrices
-    free_matrices(mttkrp_ans, matrix_count);
-    free_matrices(hacoo_mttkrp, matrix_count);
-  }
     // Free mttkrp answer matrices
     free_matrices(mttkrp_ans, matrix_count);
     free_matrices(hacoo_mttkrp, matrix_count);

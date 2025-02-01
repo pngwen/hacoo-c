@@ -24,6 +24,8 @@ Returns:
 
 matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
 
+printf("calc mttkrp\n");
+fflush(stdout);
     // Number of columns in factor matrices
     unsigned int fmax = u[0]->cols;
 
@@ -208,7 +210,8 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
             continue;
           }
 
-          //printf("b: %d\n", b);
+          printf("b: %d\n", b);
+          printf("idx[%d]: %d\n", b,idx[b]);
           if (idx[b] >= u[b]->rows) {
             fprintf(stderr,
                     "Error: idx[%d] out of bounds for u[%d] with rows %d.\n", b,

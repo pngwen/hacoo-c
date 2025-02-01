@@ -30,7 +30,7 @@ struct hacoo_tensor *hacoo_alloc(unsigned int ndims, unsigned int *dims,
 void hacoo_free(struct hacoo_tensor *t);
 
 /* Rehash tensor that has exceeded load limit to new tensor */
-void hacoo_rehash(struct hacoo_tensor *t);
+void hacoo_rehash(struct hacoo_tensor **t);
 
 /* Access functions */
 void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value);

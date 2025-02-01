@@ -12,6 +12,7 @@
 
 /* Helper Function Prototypes */
 static void hacoo_free_buckets(struct hacoo_tensor *t);
+static void free_buckets(struct hacoo_bucket **buckets, int nbuckets);
 static unsigned long long hacoo_morton(unsigned int n, unsigned int *index);
 static size_t hacoo_bucket_index(struct hacoo_tensor *t,
                                  unsigned long long morton);
@@ -108,66 +109,97 @@ void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value)
   b->value = value; // Set the value for the bucket
 
   /* Check if the load limit has been exceeded*/
-  if ((t->nnz / t->nbuckets) > ((float)t->load/100.0))
-  {
-    hacoo_rehash(t);
+  if (t->nbuckets > 0 && ((double)t->nnz / (double)t->nbuckets) > ((double)t->load / 100.0)) {
+    hacoo_rehash(&t);
   }
 }
 
-void hacoo_rehash(struct hacoo_tensor *t)
+void hacoo_rehash(struct hacoo_tensor **t)
 {
-    // Allocate a new tensor with double the number of buckets
-    struct hacoo_tensor *new_tensor = hacoo_alloc(t->ndims, t->dims, t->nbuckets * 2, t->load);
-    if (!new_tensor)
-    {
-        fprintf(stderr, "Error: Failed to allocate new tensor during rehash.\n");
+    //Allocate dummy tensor with new parameters
+      // Step 1: Allocate a new tensor with twice the number of buckets
+  struct hacoo_tensor *dummy = hacoo_alloc((*t)->ndims, (*t)->dims, (*t)->nbuckets * 2, (*t)->load);
+  hacoo_compute_params(dummy);
+
+  if (dummy== NULL) {
+      fprintf(stderr, "Failed to allocate dummy tensor during rehash.\n");
+      return;
+  }
+
+    // Allocate a new bucket array with double the number of buckets
+    struct hacoo_bucket **new_buckets = (struct hacoo_bucket **)calloc((*t)->nbuckets * 2, sizeof(struct hacoo_bucket *));
+    if (!new_buckets) {
+        fprintf(stderr, "Error: Failed to allocate new buckets during rehash.\n");
         return;
     }
 
-    printf("Rehashing: new number of buckets: %zu\n", new_tensor->nbuckets);
+    printf("Rehashing: new number of buckets: %zu\n", (*t)->nbuckets * 2);
 
-    struct hacoo_bucket *cur;
-    unsigned int *index = (unsigned int *)malloc(sizeof(unsigned int) * t->ndims);
+    unsigned int *index = (unsigned int *)malloc(sizeof(unsigned int) * (*t)->ndims);
     if (!index)
     {
         fprintf(stderr, "Error: Failed to allocate memory for index array during rehash.\n");
-        hacoo_free(new_tensor);
+        free(new_buckets);
         return;
     }
 
+    struct hacoo_bucket *cur;
+    struct hacoo_bucket *b;
+    int nnz=0; //ensure new nnz count is == current nnz
+
     // Loop over all buckets in the current tensor
-    for (size_t i = 0; i < t->nbuckets; i++)
-    {
-        cur = t->buckets[i];
-        while (cur)
-        {
-            // Extract the index from the current bucket
-            hacoo_extract_index(cur, t->ndims, index);
+    for (size_t i = 0; i < (*t)->nbuckets; i++) {
+      printf("i: %d\n",i);
+      cur = (*t)->buckets[i];
+      while (cur) {
+        //make new bucket
+        b = hacoo_new_bucket(); // Create a new bucket
+        b->morton = cur->morton;
+        b->value = cur->value;
 
-            // Rehash the entry into the new tensor
-            hacoo_set(new_tensor, index, cur->value);
+        // Compute the new bucket index
+        size_t j = hacoo_bucket_index(dummy, cur->morton);
 
-            // Move to the next bucket in the chain
-            struct hacoo_bucket *next = cur->next;
-            free(cur); // Free the current bucket
-            cur = next;
+        if (new_buckets[j] == NULL) {
+          // If the bucket at index j is empty, place the new bucket there
+          new_buckets[j] = b;
+        }else {
+          // If there is already a bucket chain, append to the end of the chain
+          struct hacoo_bucket *last = new_buckets[j];
+          while (last->next)
+          {
+            last = last->next;
+          }
+          last->next = b; // Append the new bucket to the end of the chain
         }
+        nnz++;           // Increment the number of non-zero elements
+        printf("inserted nnz %d\n",nnz);
+        cur = cur->next;
+      }
     }
 
-    // Free the old tensor's bucket array
-    free(index);
-    free(t->buckets);
+  //ensure everything copied correctly
+  if((*t)->nnz != nnz) {
+    printf("Something went wrong. Only %d nnz copied when there were originally %d nnz.\n",nnz,(*t)->nnz);
+  }
 
-    // Replace the old tensor's fields with the new tensor's fields
-    t->buckets = new_tensor->buckets;
-    t->nbuckets = new_tensor->nbuckets;
-    t->sx = new_tensor->sx;
-    t->sy = new_tensor->sy;
-    t->sz = new_tensor->sz;
+  // Copy the computed parameters from dummy to t before freeing it
+  (*t)->sx = dummy->sx;
+  (*t)->sy = dummy->sy;
+  (*t)->sz = dummy->sz;
 
-    // Free the temporary tensor structure but not its buckets
-    new_tensor->buckets = NULL;
-    hacoo_free(new_tensor);
+  struct hacoo_bucket **old_buckets = (*t)->buckets; // Save reference to old buckets
+
+  // Update tensor with new buckets and bucket count
+  (*t)->buckets = new_buckets;
+  (*t)->nbuckets *= 2;
+
+  // Free the old bucket array
+  free_buckets(old_buckets,(*t)->nbuckets / 2);
+  hacoo_free(dummy);
+  free(index);
+
+  printf("Rehashing completed. tensor has %d nnz and %d buckets.\n",(*t)->nnz,(*t)->nbuckets);
 }
 
 
@@ -225,6 +257,28 @@ static void hacoo_free_buckets(struct hacoo_tensor *t)
   free(t->buckets);
 }
 
+/* free only buckets */
+static void free_buckets(struct hacoo_bucket **buckets, int nbuckets)
+{
+  struct hacoo_bucket *cur, *next;
+  int i;
+
+  for (i = 0; i < nbuckets; i++)
+  {
+    cur = buckets[i];
+    while (cur)
+    {
+      next = cur->next;
+      free(cur);
+      cur = next;
+    }
+  }
+
+  free(buckets);
+}
+
+// Encodes index, returns morton code
+// n: ndimensions
 static unsigned long long hacoo_morton(unsigned int n, unsigned int *index)
 {
   unsigned long long m = 0;
@@ -293,6 +347,10 @@ struct hacoo_bucket *hacoo_new_bucket()
 {
   struct hacoo_bucket *b;
   b = calloc(1, sizeof(struct hacoo_bucket));
+  if (!b) {
+    fprintf(stderr, "Error: Failed to allocate memory for new bucket.\n");
+    return NULL;
+  }
   b->next = NULL;
   b->morton = 0;
   b->value = 0;
@@ -361,21 +419,28 @@ struct hacoo_tensor *file_init(FILE *file) {
 
 /* Read an entry from a file */
 void file_entry(struct hacoo_tensor *t, FILE *file) {
-  int index[t->ndims];
+
   double value;
+  unsigned int *index = malloc(t->ndims * sizeof(unsigned int));
+  if (!index) {
+    fprintf(stderr, "Error: Failed to allocate memory for index array.\n");
+    return;
+  }
 
   /* read the index */
   for (int i = 0; i < t->ndims; i++) {
-    if (feof(stdin))
+    if (fscanf(file, "%u", &index[i]) != 1) {
+      fprintf(stderr, "Error: Failed to read index %d from file.\n", i);
+      free(index);
       return;
-    fscanf(file, "%u", &index[i]);
+    }
     //printf("index: %d\n",index[i]);
   }
 
-  //if FROSTT tensor, subtract 1 from everything
+  /*//if FROSTT tensor, subtract 1 from everything
   for(int i=0;i<t->ndims;i++) {
     index[i] = index[i]-1;
-  }
+  }*/
 
   /* read the value */
   if (feof(stdin))
@@ -414,172 +479,3 @@ void print_tensor(struct hacoo_tensor *t)
     }
   }
 }
-
-/*
-int save_hacoo_tensor_to_file(const struct hacoo_tensor *tensor, const char *filename) {
-    if (tensor == NULL || filename == NULL) {
-        fprintf(stderr, "Error: Invalid tensor or filename.\n");
-        return -1;
-    }
-
-    FILE *file = fopen(filename, "wb");
-    if (file == NULL) {
-        perror("Error opening file for writing");
-        return -1;
-    }
-
-    // Step 1: Write the number of dimensions
-    fwrite(&tensor->ndims, sizeof(unsigned int), 1, file);
-
-    // Step 2: Write the dimensions array
-    fwrite(tensor->dims, sizeof(unsigned int), tensor->ndims, file);
-
-    // Step 3: Write the number of non-zero entries
-    fwrite(&tensor->nnz, sizeof(unsigned int), 1, file);
-
-    size_t *index = (size_t *)malloc(sizeof(size_t) * tensor->ndims);
-    // Step 4: Iterate through buckets and save indices and values
-    for (int b = 0; b < tensor->nbuckets; b++) {
-        struct hacoo_bucket *cur = tensor->buckets[b];
-        while (cur != NULL) {
-
-            //TODO: extract indices morton before writing
-             hacoo_extract_index(cur, tensor->ndims, index);
-            // Write indices (array of size ndims)
-            fwrite(index, sizeof(size_t), tensor->ndims, file);
-
-            // Write value (double)
-            fwrite(&cur->value, sizeof(double), 1, file);
-
-            cur = cur->next;
-        }
-    }
-
-    free(index);
-    fclose(file);
-    return 0; // Success
-}
-
-struct hacoo_tensor *load_hacoo_tensor_from_file(const char *filename) {
-    if (filename == NULL) {
-        fprintf(stderr, "Error: Invalid filename.\n");
-        return NULL;
-    }
-
-    FILE *file = fopen(filename, "rb");
-    if (file == NULL) {
-        perror("Error opening file for reading");
-        return NULL;
-    }
-
-    // Step 1: Read the number of dimensions
-    unsigned int ndims;
-    if (fread(&ndims, sizeof(unsigned int), 1, file) != 1) {
-        fprintf(stderr, "Error reading number of dimensions.\n");
-        fclose(file);
-        return NULL;
-    }
-
-    // Step 2: Read the dimensions array
-    unsigned int *dims = (unsigned int *)malloc(sizeof(unsigned int) * ndims);
-    if (dims == NULL) {
-        fprintf(stderr, "Error allocating memory for dimensions.\n");
-        fclose(file);
-        return NULL;
-    }
-    if (fread(dims, sizeof(unsigned int), ndims, file) != ndims) {
-        fprintf(stderr, "Error reading dimensions array.\n");
-        free(dims);
-        fclose(file);
-        return NULL;
-    }
-
-    // Step 3: Read the number of non-zero entries
-    unsigned int nnz;
-    if (fread(&nnz, sizeof(unsigned int), 1, file) != 1) {
-        fprintf(stderr, "Error reading number of non-zero entries.\n");
-        free(dims);
-        fclose(file);
-        return NULL;
-    }
-
-    // Step 4: Allocate memory for the HACOO tensor
-    struct hacoo_tensor *tensor = (struct hacoo_tensor *)malloc(sizeof(struct hacoo_tensor));
-    if (tensor == NULL) {
-        fprintf(stderr, "Error allocating memory for HACOO tensor.\n");
-        free(dims);
-        fclose(file);
-        return NULL;
-    }
-
-    tensor->ndims = ndims;
-    tensor->dims = dims;
-    tensor->nnz = nnz;
-    tensor->nbuckets = 1024; // Choose a default bucket size (adjust as needed)
-    tensor->buckets = (struct hacoo_bucket **)calloc(tensor->nbuckets, sizeof(struct hacoo_bucket *));
-    if (tensor->buckets == NULL) {
-        fprintf(stderr, "Error allocating memory for HACOO buckets.\n");
-        free(tensor);
-        free(dims);
-        fclose(file);
-        return NULL;
-    }
-
-    // Step 5: Read each non-zero entry and add it to the tensor
-    for (unsigned int i = 0; i < nnz; i++) {
-        // Read the indices
-        unsigned int *indices = (unsigned int *)malloc(sizeof(unsigned int) * ndims);
-        if (indices == NULL) {
-            fprintf(stderr, "Error allocating memory for indices.\n");
-            // Free all allocated resources
-            for (int b = 0; b < tensor->nbuckets; b++) {
-                struct hacoo_bucket *cur = tensor->buckets[b];
-                while (cur) {
-                    struct hacoo_bucket *next = cur->next;
-                    free(cur->idx);
-                    free(cur);
-                    cur = next;
-                }
-            }
-            free(tensor->buckets);
-            free(tensor);
-            free(dims);
-            fclose(file);
-            return NULL;
-        }
-        if (fread(indices, sizeof(unsigned int), ndims, file) != ndims) {
-            fprintf(stderr, "Error reading indices.\n");
-            free(indices);
-            fclose(file);
-            return NULL;
-        }
-
-        // Read the value
-        double value;
-        if (fread(&value, sizeof(double), 1, file) != 1) {
-            fprintf(stderr, "Error reading value.\n");
-            free(indices);
-            fclose(file);
-            return NULL;
-        }
-
-        // Add the non-zero entry to the tensor (hashing by first index as an example)
-        unsigned int bucket = indices[0] % tensor->nbuckets;
-        struct hacoo_bucket *new_bucket = (struct hacoo_bucket *)malloc(sizeof(struct hacoo_bucket));
-        if (new_bucket == NULL) {
-            fprintf(stderr, "Error allocating memory for HACOO bucket.\n");
-            free(indices);
-            fclose(file);
-            return NULL;
-        }
-
-        new_bucket->indices = indices;
-        new_bucket->value = value;
-        new_bucket->next = tensor->buckets[bucket];
-        tensor->buckets[bucket] = new_bucket;
-    }
-
-    fclose(file);
-    return tensor;
-}
-*/

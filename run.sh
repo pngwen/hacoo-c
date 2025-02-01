@@ -12,5 +12,15 @@
 #Folder: mttkrp_test2
 #./hacoo_test mttkrp_test2/factor_matrices.txt mttkrp_test2/mttkrp_answers.txt < mttkrp_test2/sptensor_data.tns
 
+#Folder: mttkrp_test3 (1 based to 0-based calc MATLAB script, subtracts 1 from all indexes in hacoo.c library)
+#./hacoo_test mttkrp_test3/factor_matrices.txt mttkrp_test3/mttkrp_answers.txt < mttkrp_test3/sptensor_data.tns
+
+#Folder: mttkrp_test4 (rehash test)
+./hacoo_test mttkrp_test4/factor_matrices.txt mttkrp_test4/mttkrp_answers.txt < mttkrp_test4/sptensor_data.tns
+
 #Folder: uber_test
-./hacoo_test uber_test/factor_matrices.txt uber_test/mttkrp_answers.txt < uber_test/uber.tns
+#MAKE SURE YOU UNCOMMENT CODE THAT SUBTRACTS 1 FROM INDEXES
+#DID YOU READ THAT
+#
+#
+#./hacoo_test uber_test/factor_matrices.txt uber_test/mttkrp_answers.txt < uber_test/uber.tns
