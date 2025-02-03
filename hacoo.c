@@ -108,9 +108,13 @@ void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value)
 
   b->value = value; // Set the value for the bucket
 
+printf("finished setting index: ");
+for(int p=0;p<t->ndims;p++) { printf("%d ",index[p]); }
+
   /* Check if the load limit has been exceeded*/
   if (t->nbuckets > 0 && ((double)t->nnz / (double)t->nbuckets) > ((double)t->load / 100.0)) {
     hacoo_rehash(&t);
+    print_tensor(t);
   }
 }
 
@@ -129,7 +133,7 @@ void hacoo_rehash(struct hacoo_tensor **t)
     // Allocate a new bucket array with double the number of buckets
     struct hacoo_bucket **new_buckets = (struct hacoo_bucket **)calloc((*t)->nbuckets * 2, sizeof(struct hacoo_bucket *));
     if (!new_buckets) {
-        fprintf(stderr, "Error: Failed to allocate new buckets during rehash.\n");
+        printf(stderr, "Error: Failed to allocate new buckets during rehash.\n");
         return;
     }
 
@@ -138,7 +142,7 @@ void hacoo_rehash(struct hacoo_tensor **t)
     unsigned int *index = (unsigned int *)malloc(sizeof(unsigned int) * (*t)->ndims);
     if (!index)
     {
-        fprintf(stderr, "Error: Failed to allocate memory for index array during rehash.\n");
+        printf(stderr, "Error: Failed to allocate memory for index array during rehash.\n");
         free(new_buckets);
         return;
     }
@@ -149,7 +153,7 @@ void hacoo_rehash(struct hacoo_tensor **t)
 
     // Loop over all buckets in the current tensor
     for (size_t i = 0; i < (*t)->nbuckets; i++) {
-      printf("i: %d\n",i);
+      //printf("i: %d\n",i);
       cur = (*t)->buckets[i];
       while (cur) {
         //make new bucket
@@ -173,7 +177,7 @@ void hacoo_rehash(struct hacoo_tensor **t)
           last->next = b; // Append the new bucket to the end of the chain
         }
         nnz++;           // Increment the number of non-zero elements
-        printf("inserted nnz %d\n",nnz);
+        //printf("inserted nnz %d\n",nnz);
         cur = cur->next;
       }
     }
@@ -434,11 +438,10 @@ void file_entry(struct hacoo_tensor *t, FILE *file) {
       free(index);
       return;
     }
-    //printf("index: %d\n",index[i]);
   }
 
-  /*//if FROSTT tensor, subtract 1 from everything
-  for(int i=0;i<t->ndims;i++) {
+  //if FROSTT tensor, subtract 1 from everything
+  /*for(int i=0;i<t->ndims;i++) {
     index[i] = index[i]-1;
   }*/
 

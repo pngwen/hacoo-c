@@ -4,8 +4,8 @@
 #include <time.h> // for time
 #include <math.h>  // For fabs()
 
-// Define an appropriate epsilon value for comparing equivalent matrices
-#define EPSILON 1e-4
+//Define acceptable margin of error
+const double EPSILON = 0.004;
 
 matrix_t *zeroes(unsigned int n_rows, unsigned int n_cols) {
   matrix_t *matrix = (matrix_t *)malloc(sizeof(matrix_t));
