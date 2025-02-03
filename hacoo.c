@@ -20,6 +20,34 @@ static void hacoo_compute_params(struct hacoo_tensor *t);
 static struct hacoo_bucket *hacoo_bucket_search(struct hacoo_bucket *b,
                                                 unsigned long long morton);
 static size_t hacoo_max_bits(unsigned int n);
+void print_bucket(struct hacoo_tensor *t, int bucket_index);
+
+/* Print the contents of a specific bucket in the tensor */
+void print_bucket(struct hacoo_tensor *t, int bucket_index) {
+    if (bucket_index < 0 || bucket_index >= t->nbuckets) {
+        printf("Invalid bucket index.\n");
+        return;
+    }
+
+    struct hacoo_bucket *b = t->buckets[bucket_index];
+    if (!b) {
+        printf("Bucket %d is empty.\n", bucket_index);
+        return;
+    }
+
+    printf("\nBucket %d:\n=============\n", bucket_index);
+    unsigned int index[t->ndims];
+
+    for (; b; b = b->next) {
+        hacoo_extract_index(b, t->ndims, index);
+        printf("0x%llx: ", b->morton);
+        for (int j = 0; j < t->ndims; j++) {
+            printf("%u ", index[j]);
+        }
+        printf("%f\n", b->value);
+    }
+}
+
 
 /* Allocation and deallocation functions */
 struct hacoo_tensor *hacoo_alloc(unsigned int ndims, unsigned int *dims,
@@ -75,7 +103,7 @@ void hacoo_free(struct hacoo_tensor *t)
 /* Access functions */
 void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value)
 {
-
+  //fprintf(stderr, "In hacoo set: recieved index: %u %u %u %u\n",index[0], index[1],index[2],index[3]);
   unsigned long long morton = hacoo_morton(t->ndims, index);
   size_t i = hacoo_bucket_index(t, morton);
   struct hacoo_bucket *b;
@@ -108,13 +136,9 @@ void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value)
 
   b->value = value; // Set the value for the bucket
 
-printf("finished setting index: ");
-for(int p=0;p<t->ndims;p++) { printf("%d ",index[p]); }
-
   /* Check if the load limit has been exceeded*/
   if (t->nbuckets > 0 && ((double)t->nnz / (double)t->nbuckets) > ((double)t->load / 100.0)) {
     hacoo_rehash(&t);
-    print_tensor(t);
   }
 }
 
@@ -136,8 +160,6 @@ void hacoo_rehash(struct hacoo_tensor **t)
         printf(stderr, "Error: Failed to allocate new buckets during rehash.\n");
         return;
     }
-
-    printf("Rehashing: new number of buckets: %zu\n", (*t)->nbuckets * 2);
 
     unsigned int *index = (unsigned int *)malloc(sizeof(unsigned int) * (*t)->ndims);
     if (!index)
@@ -237,9 +259,13 @@ void hacoo_extract_index(struct hacoo_bucket *b, unsigned int n,
     for (unsigned int i = 0; i < n; i++)
     {
       index[i] |= ((b->morton >> (bit * n + i)) & 1) << bit;
+      if(index[i] > 1000) {
+        fprintf(stderr, "Index %u is unusally large\n",index[i]);
+      }
     }
   }
 }
+
 
 /* Helper function implementations. */
 static void hacoo_free_buckets(struct hacoo_tensor *t)
@@ -434,16 +460,16 @@ void file_entry(struct hacoo_tensor *t, FILE *file) {
   /* read the index */
   for (int i = 0; i < t->ndims; i++) {
     if (fscanf(file, "%u", &index[i]) != 1) {
-      fprintf(stderr, "Error: Failed to read index %d from file.\n", i);
+      fprintf(stderr, "Error: EOF or Failed to read index %d from file.\n", i);
       free(index);
       return;
     }
   }
 
   //if FROSTT tensor, subtract 1 from everything
-  /*for(int i=0;i<t->ndims;i++) {
+  for(int i=0;i<t->ndims;i++) {
     index[i] = index[i]-1;
-  }*/
+  }
 
   /* read the value */
   if (feof(stdin))

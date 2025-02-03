@@ -16,11 +16,13 @@
 #./hacoo_test mttkrp_test3/factor_matrices.txt mttkrp_test3/mttkrp_answers.txt < mttkrp_test3/sptensor_data.tns
 
 #Folder: mttkrp_test4 (rehash test)
-./hacoo_test mttkrp_test4/factor_matrices.txt mttkrp_test4/mttkrp_answers.txt < mttkrp_test4/sptensor_data.tns
+#./hacoo_test mttkrp_test4/factor_matrices.txt mttkrp_test4/mttkrp_answers.txt < mttkrp_test4/sptensor_data.tns
 
-#Folder: uber_test
 #MAKE SURE YOU UNCOMMENT CODE THAT SUBTRACTS 1 FROM INDEXES
 #DID YOU READ THAT
 #
 #
-#./hacoo_test uber_test/factor_matrices.txt uber_test/mttkrp_answers.txt < uber_test/uber.tns
+#Folder: mttkrp_test5 (index fixing test)
+#./hacoo_test mttkrp_test5/factor_matrices.txt mttkrp_test5/mttkrp_answers.txt < mttkrp_test5/sptensor_data.tns
+
+./hacoo_test uber_test/factor_matrices.txt uber_test/mttkrp_answers.txt < uber_test/uber.tns

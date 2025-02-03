@@ -178,7 +178,10 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
       for (cur = h->buckets[m]; cur; cur = cur->next) {
         // decode element in the bucket
         hacoo_extract_index(cur, h->ndims, idx);
-
+        /*for(int j = 0;j<h->ndims;j++) {
+          printf("index[%d]: %u", j,idx[j] );
+        }
+        printf("\n");*/
         if (cur == NULL) {
           fprintf(stderr, "Error: cur is NULL.\n");
           return NULL;

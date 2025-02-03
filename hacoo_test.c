@@ -42,8 +42,8 @@ int main(int argc, char *argv[]) {
   global_argc = argc;
   global_argv = argv;
 
-  //CUnit_mttkrp_ser();
-  CUnit_mttkrp_par();
+  CUnit_mttkrp_ser();
+  //CUnit_mttkrp_par();
 }
 
 /* Time Serial MTTKRP algorithm.
@@ -74,12 +74,12 @@ void mttkrp_test_ser() {
   struct hacoo_tensor *t = read_init();
   while (!feof(stdin)) {
     read_entry(t);
-    print_status(t);
+    //print_status(t);
   }
 
   // print the tensor
-  print_tensor(t);
-/*
+  //print_tensor(t);
+
   // read mttkrp answers for each mode
   matrix_t **mttkrp_ans = NULL;
 
@@ -93,33 +93,42 @@ void mttkrp_test_ser() {
 
   //Print factor matrices
   //print_matrices(mttkrp_ans, matrix_count);
-
+  
+    //calc only mode 3 mttkrp 
+      matrix_t **hacoo_mttkrp =
+      (matrix_t **)malloc(sizeof(matrix_t *) * t->ndims);
+    printf("Mode-3 MTTKRP: \n");
+    printf("HaCOO-C Answer: \n");
+    hacoo_mttkrp[2] = mttkrp_serial(t, factor_matrices, 2);
+    print_matrix(hacoo_mttkrp[2]);
+    //printf("MATLAB Answer:\n");
+    //print_matrix(mttkrp_ans[2]);
+    //CU_ASSERT(are_matrices_equal(mttkrp_ans[2], hacoo_mttkrp[2]));
+    free_matrices(hacoo_mttkrp,matrix_count);
+/*
   // use this library's mttkrp to calculate answers
   matrix_t **hacoo_mttkrp =
       (matrix_t **)malloc(sizeof(matrix_t *) * t->ndims);
   for (int i = 0; i < matrix_count; i++) {
-    //printf("\nMode-%d MTTKRP: \n", i + 1);
+    printf("\nMode-%d MTTKRP: \n", i + 1);
     hacoo_mttkrp[i] = mttkrp_serial(t, factor_matrices, i);
   }
 
   // for every mttkrp answer compare answer with this libarary's mttkrp answer
   for (int i = 0; i < matrix_count; i++) {
-    //printf("HaCOO-C Answer:\n");
-    //print_matrix(hacoo_mttkrp[i]);
     printf("HaCOO-C Answer:\n");
     print_matrix(hacoo_mttkrp[i]);
     printf("MATLAB Answer:\n");
     print_matrix(mttkrp_ans[i]);
     CU_ASSERT(are_matrices_equal(mttkrp_ans[i], hacoo_mttkrp[i]));
   }
-
+*/
   // Free factor matrices
   free_matrices(factor_matrices, matrix_count);
 
   // Free mttkrp answer matrices
   free_matrices(mttkrp_ans, matrix_count);
-  free_matrices(hacoo_mttkrp, matrix_count);
-  */
+  //free_matrices(hacoo_mttkrp, matrix_count);
 
    // free tensor
   hacoo_free(t);
@@ -154,11 +163,11 @@ void mttkrp_test_par() {
   struct hacoo_tensor *t = read_init();
   while (!feof(stdin)) {
     read_entry(t);
-    print_status(t);
+    //print_status(t);
   }
 
   // print the tensor
-  print_tensor(t);
+  //print_tensor(t);
 
   // read mttkrp answers for each mode
   matrix_t **mttkrp_ans = NULL;

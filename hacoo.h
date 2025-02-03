@@ -13,7 +13,7 @@ struct hacoo_bucket {
 };
 
 struct hacoo_tensor {
-  unsigned int ndims;
+  size_t ndims;
   unsigned int *dims;
   struct hacoo_bucket **buckets;
   size_t nbuckets;
