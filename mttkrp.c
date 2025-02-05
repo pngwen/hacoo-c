@@ -150,10 +150,12 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
   //printf("h->ndims: %d\n", h->ndims);
 
   // tind holds index at specific mode f
-  unsigned int *tind = (unsigned int *)malloc(sizeof(unsigned int) * h->nnz);
+  //unsigned int *tind = (unsigned int *)malloc(sizeof(unsigned int) * h->nnz);
+  unsigned int *tind = (unsigned int *)calloc(h->nnz,sizeof(unsigned int) );
   //printf("h->nnz: %d\n", h->nnz);
   // to hold nnz values
-  double *t = (double *)malloc(sizeof(double) * h->nnz);
+  //double *t = (double *)malloc(sizeof(double) * h->nnz);
+  double *t = (double *)calloc(h->nnz,sizeof(double));
 
   if (idx == NULL || tind == NULL || t == NULL) {
     fprintf(stderr, "Error: Memory allocation failed.\n");
@@ -164,7 +166,7 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
 
   // go through each column
   for (int f = 0; f < fmax; f++) {
-    //printf("fmax: %d\n", fmax);
+
     int z = 0; // counter for which nnz we're on
 
     for (int m = 0; m < h->nbuckets; m++) { // go through every bucket
@@ -178,10 +180,7 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
       for (cur = h->buckets[m]; cur; cur = cur->next) {
         // decode element in the bucket
         hacoo_extract_index(cur, h->ndims, idx);
-        /*for(int j = 0;j<h->ndims;j++) {
-          printf("index[%d]: %u", j,idx[j] );
-        }
-        printf("\n");*/
+
         if (cur == NULL) {
           fprintf(stderr, "Error: cur is NULL.\n");
           return NULL;
@@ -194,15 +193,10 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
         }
 
         t[z] = cur->value;
+         if(t[z]==0) {printf("set t[%d] to 0.\n",z);}
         tind[z] = idx[n];
 
         int b = 0;
-        
-        /*printf("index: ");
-        for (int k = 0; k < h->ndims; k++) {
-          printf("%d ", idx[k]);
-        }
-        printf("\n");*/
         
         while (b < fmax) {
           // skip the unfolded mode
@@ -211,8 +205,6 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
             continue;
           }
 
-          //printf("b: %d\n", b);
-          //printf("idx[%d]: %d\n", b,idx[b]);
           if (idx[b] >= u[b]->rows) {
             fprintf(stderr,
                     "Error: idx[%d] out of bounds for u[%d] with rows %d.\n", b,
@@ -221,41 +213,27 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
           }
 
           // multiply the nnz by each factor
-          //printf("vals[idx[%d]][%d]: %f\n", z, f, u[b]->vals[idx[b]][f]);
           t[z] *= u[b]->vals[idx[b]][f];
-
-          /*// print current t for debugging
-          printf("t = ");
-          for (int j = 0; j < h->ndims; j++) {
-            printf("%f ", t[j]);
-          }
-          printf("\n");
-          */
-
           b++; // advance to next factor matrix
         }
         z++; // advance to next nnz
         //printf("advancing to next nnz...\n");
       }
     }
-    //printf("accumulate m(:,f)...\n");
-    /*
-    printf("tind:\n");
-    //print tind
-    for(int p = 0;p<h->nnz;p++){
-      printf("%d ",tind[p]);
-    }
-    */
 
     // accumulate m(:,f)
     for (int z = 0; z < h->nnz; z++) {
       //printf("z: %d, tind[z]: %d, res->rows: %d\n", z, tind[z], res->rows);  // Debug: print indices and sizes
       if (tind[z] >= res->rows) {
-        //fprintf(stderr, "Error: tind[z] (%d) out of bounds for res with rows %d\n", tind[z], res->rows);
+        fprintf(stderr, "Error: tind[z] (%d) out of bounds for res with rows %d\n", tind[z], res->rows);
         return NULL;
       }
 
       res->vals[tind[z]][f] += t[z];
+      if (res->vals[tind[z]][f]<= 0.00) {
+        printf("res->vals[tind[%d]][%f] is 0.\n",z,f);
+        return;
+      }
       // Debugging: print the updated result
       //printf("res[%d][%d] updated to: %f\n", tind[z], f, res->vals[tind[z]][f]);
     }

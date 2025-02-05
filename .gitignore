@@ -64,6 +64,4 @@ dkms.conf
 .cache
 
 #other
-uber_test/*.tns
-*.tns
 *.txt

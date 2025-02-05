@@ -382,3 +382,50 @@ void invert_matrix(matrix_t *res, matrix_t *a)
         }
     }
 }
+
+/* Print 1-D Array */
+
+void print_array(double *arr, int size) {
+    printf("Array: [");
+    for (int i = 0; i < size; i++) {
+        printf("%d", arr[i]);
+        if (i < size - 1) {
+            printf(", ");
+        }
+    }
+    printf("]\n");
+}
+
+/* Locate where 0.0s start in array*/
+void locate_zeroes(double *arr, int size) {
+    
+    for (int i = 0; i < size; i++) {
+        if (arr[i] < 0.00) {
+            printf("0's Start at index %d\n",i);
+            return;
+        }
+    }
+}
+
+#include <stdio.h>
+
+/*Print a speciic matrix column */
+void print_matrix_column(matrix_t *matrix, int col_index) {
+    if (col_index < 0 || col_index >= matrix->cols) {
+        printf("Invalid column index!\n");
+        return;
+    }
+
+    printf("Column %d: [", col_index);
+    for (int i = 0; i < matrix->rows; i++) {
+      if(matrix->vals[i][col_index] <= 0.00) {
+        printf("Attempted to print 0 at index [%d][%d]\n",i,col_index);
+        return;
+      }
+        printf("%.2f", matrix->vals[i][col_index]);
+        if (i < matrix->rows - 1) {
+            printf(", ");
+        }
+    }
+    printf("]\n");
+}

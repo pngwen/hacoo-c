@@ -104,7 +104,7 @@ void mttkrp_test_ser() {
     //printf("MATLAB Answer:\n");
     //print_matrix(mttkrp_ans[2]);
     //CU_ASSERT(are_matrices_equal(mttkrp_ans[2], hacoo_mttkrp[2]));
-    free_matrices(hacoo_mttkrp,matrix_count);
+    free_matrix(hacoo_mttkrp[2]);
 /*
   // use this library's mttkrp to calculate answers
   matrix_t **hacoo_mttkrp =

@@ -70,4 +70,11 @@ void invert_matrix(matrix_t *res, matrix_t *a);
 /* basic test for matrix functions */
 void matrix_test();
 
+/* Print 1-D array */
+void print_array(double *arr, int size);
+
+void locate_zeroes(double *arr, int size);
+
+void print_matrix_column(matrix_t *matrix, int col_index);
+
 #endif
