@@ -7,8 +7,8 @@
 void least_squares(matrix_t *res, matrix_t *A, matrix_t *B)
 {
     // Pre-allocated matrices for intermediate results
-    matrix_t *A_transpose_A = zeroes(A->cols, A->cols);
-    matrix_t *A_transpose_B = zeroes(A->cols, B->cols);
+    matrix_t *A_transpose_A = new_matrix(A->cols, A->cols);
+    matrix_t *A_transpose_B = new_matrix(A->cols, B->cols);
 
     // Compute A^T * A
     mul_transpose_matrix(A_transpose_A, A, A);
@@ -35,7 +35,7 @@ matrix_t **cpd(struct hacoo_tensor *t, unsigned int rank, unsigned int max_iter,
 
     for (unsigned int i = 0; i < t->ndims; i++)
     {
-        factors[i] = create_random_matrix(t->dims[i], rank, 0, 1);
+        factors[i] = new_random_matrix(t->dims[i], rank, 0, 1);
     }
 
     // solve the CPD via ALS

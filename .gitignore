@@ -65,3 +65,7 @@ dkms.conf
 
 #other
 *.txt
+
+#ignore my Makefile & my gitignore
+.gitignore
+Makefile

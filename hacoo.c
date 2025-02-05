@@ -259,9 +259,6 @@ void hacoo_extract_index(struct hacoo_bucket *b, unsigned int n,
     for (unsigned int i = 0; i < n; i++)
     {
       index[i] |= ((b->morton >> (bit * n + i)) & 1) << bit;
-      if(index[i] > 1000) {
-        fprintf(stderr, "Index %u is unusally large\n",index[i]);
-      }
     }
   }
 }
@@ -414,6 +411,7 @@ struct hacoo_tensor *read_tensor_file(FILE *file)
 
 /* Initialize a tensor from a file */
 struct hacoo_tensor *file_init(FILE *file) {
+
   // Buffer to read the input line
   char buffer[1024];
   fgets(buffer, sizeof(buffer), file);
@@ -459,20 +457,18 @@ void file_entry(struct hacoo_tensor *t, FILE *file) {
 
   /* read the index */
   for (int i = 0; i < t->ndims; i++) {
-    if (fscanf(file, "%u", &index[i]) != 1) {
-      fprintf(stderr, "Error: EOF or Failed to read index %d from file.\n", i);
-      free(index);
+    if (feof(file))
       return;
-    }
+    fscanf(file, "%u", &index[i]);
   }
 
   //if FROSTT tensor, subtract 1 from everything
-  for(int i=0;i<t->ndims;i++) {
+  /*for(int i=0;i<t->ndims;i++) {
     index[i] = index[i]-1;
-  }
+  }*/
 
   /* read the value */
-  if (feof(stdin))
+  if (feof(file))
     return;
   fscanf(file, "%lf", &value);
 

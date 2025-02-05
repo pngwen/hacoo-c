@@ -18,13 +18,13 @@ typedef struct matrix {
 } matrix_t;
 
 /* Create matrix of all zeros */
-matrix_t *zeroes(unsigned int n_rows, unsigned int n_cols);
+matrix_t *new_matrix(unsigned int n_rows, unsigned int n_cols);
 
 /* Generate a random matrix of a given size and value range */
-matrix_t* create_random_matrix(size_t rows, size_t cols, double min_value, double max_value);
+matrix_t* new_random_matrix(size_t rows, size_t cols, double min_value, double max_value);
 
-/* Make a new matrix */
-matrix_t *new_matrix(double *data, unsigned int n_rows, unsigned int n_cols);
+/* Make a new matrix from existing data */
+matrix_t *array_to_matrix(double *data, unsigned int n_rows, unsigned int n_cols);
 
 /* Copy contents of one matrix to a newly allocated matrix */
 matrix_t *copy_matrix(matrix_t *m);

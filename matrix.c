@@ -7,7 +7,7 @@
 //Define acceptable margin of error
 const double EPSILON = 0.004;
 
-matrix_t *zeroes(unsigned int n_rows, unsigned int n_cols) {
+matrix_t *new_matrix(unsigned int n_rows, unsigned int n_cols) {
   matrix_t *matrix = (matrix_t *)malloc(sizeof(matrix_t));
   matrix->rows = n_rows;
   matrix->cols = n_cols;
@@ -20,8 +20,8 @@ matrix_t *zeroes(unsigned int n_rows, unsigned int n_cols) {
 }
 
 /* Generate a random matrix of a given size and value range */
-matrix_t* create_random_matrix(size_t rows, size_t cols, double min_value, double max_value) {
-    matrix_t *random_matrix = zeroes(rows, cols);
+matrix_t* new_random_matrix(size_t rows, size_t cols, double min_value, double max_value) {
+    matrix_t *random_matrix = new_matrix(rows, cols);
 
     // Seed the random number generator
     srand((unsigned int)time(NULL));
@@ -36,11 +36,10 @@ matrix_t* create_random_matrix(size_t rows, size_t cols, double min_value, doubl
     return random_matrix;
 }
 
-matrix_t *new_matrix(double *data, unsigned int n_rows, unsigned int n_cols) {
-  matrix_t *matrix = zeroes(n_rows, n_cols);
+matrix_t *array_to_matrix(double *data, unsigned int n_rows, unsigned int n_cols) {
+  matrix_t *matrix = new_matrix(n_rows, n_cols);
   for (int x = 0; x < n_rows; x++) {
     for (int y = 0; y < n_cols; y++) {
-      // printf("Inserting %f at (%d, %d)\n", data[x * n_cols + y], x, y);
       matrix->vals[x][y] = data[n_cols * x + y];
     }
   }
@@ -50,7 +49,7 @@ matrix_t *new_matrix(double *data, unsigned int n_rows, unsigned int n_cols) {
 /* Copy an existing matrix to a newly allocated matrix */
 matrix_t* copy_matrix(matrix_t *original) {
     // Create a new matrix with the same dimensions
-    matrix_t *copy = zeroes(original->rows, original->cols);
+    matrix_t *copy = new_matrix(original->rows, original->cols);
 
     // Copy the data from the original matrix to the new one
     for (size_t i = 0; i < original->rows; i++) {
@@ -259,7 +258,7 @@ int read_matrix_test(const char *filename) {
 void matrix_test() {
 
   double a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-  matrix_t *m1 = new_matrix(a, 4, 3);
+  matrix_t *m1 = array_to_matrix(a, 4, 3);
   print_matrix(m1);
   free_matrix(m1);
 }
@@ -320,7 +319,7 @@ void invert_matrix(matrix_t *res, matrix_t *a)
     }
 
     // Create a temporary matrix to store the augmented matrix
-    matrix_t *augmented = zeroes(a->rows, 2 * a->cols);
+    matrix_t *augmented = new_matrix(a->rows, 2 * a->cols);
 
     // Copy the original matrix into the left half of the augmented matrix
     for (int i = 0; i < a->rows; i++)
@@ -396,19 +395,6 @@ void print_array(double *arr, int size) {
     printf("]\n");
 }
 
-/* Locate where 0.0s start in array*/
-void locate_zeroes(double *arr, int size) {
-    
-    for (int i = 0; i < size; i++) {
-        if (arr[i] < 0.00) {
-            printf("0's Start at index %d\n",i);
-            return;
-        }
-    }
-}
-
-#include <stdio.h>
-
 /*Print a speciic matrix column */
 void print_matrix_column(matrix_t *matrix, int col_index) {
     if (col_index < 0 || col_index >= matrix->cols) {
@@ -418,10 +404,6 @@ void print_matrix_column(matrix_t *matrix, int col_index) {
 
     printf("Column %d: [", col_index);
     for (int i = 0; i < matrix->rows; i++) {
-      if(matrix->vals[i][col_index] <= 0.00) {
-        printf("Attempted to print 0 at index [%d][%d]\n",i,col_index);
-        return;
-      }
         printf("%.2f", matrix->vals[i][col_index]);
         if (i < matrix->rows - 1) {
             printf(", ");
