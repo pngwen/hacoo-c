@@ -232,7 +232,7 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
       res->vals[tind[z]][f] += t[z];
       if (res->vals[tind[z]][f]<= 0.00) {
         printf("res->vals[tind[%d]][%f] is 0.\n",z,f);
-        return;
+        return NULL;
       }
       // Debugging: print the updated result
       //printf("res[%d][%d] updated to: %f\n", tind[z], f, res->vals[tind[z]][f]);

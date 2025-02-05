@@ -99,8 +99,8 @@ void mttkrp_test_ser() {
       (matrix_t **)malloc(sizeof(matrix_t *) * t->ndims);
     printf("Mode-3 MTTKRP: \n");
     printf("HaCOO-C Answer: \n");
-    hacoo_mttkrp[2] = mttkrp_serial(t, factor_matrices, 2);
-    print_matrix(hacoo_mttkrp[2]);
+    hacoo_mttkrp[2] = mttkrp_serial(t, factor_matrices, 0);
+    print_matrix(hacoo_mttkrp[0]);
     //printf("MATLAB Answer:\n");
     //print_matrix(mttkrp_ans[2]);
     //CU_ASSERT(are_matrices_equal(mttkrp_ans[2], hacoo_mttkrp[2]));

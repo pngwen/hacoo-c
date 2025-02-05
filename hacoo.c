@@ -157,14 +157,14 @@ void hacoo_rehash(struct hacoo_tensor **t)
     // Allocate a new bucket array with double the number of buckets
     struct hacoo_bucket **new_buckets = (struct hacoo_bucket **)calloc((*t)->nbuckets * 2, sizeof(struct hacoo_bucket *));
     if (!new_buckets) {
-        printf(stderr, "Error: Failed to allocate new buckets during rehash.\n");
+        fprintf(stderr, "Error: Failed to allocate new buckets during rehash.\n");
         return;
     }
 
     unsigned int *index = (unsigned int *)malloc(sizeof(unsigned int) * (*t)->ndims);
     if (!index)
     {
-        printf(stderr, "Error: Failed to allocate memory for index array during rehash.\n");
+        fprintf(stderr, "Error: Failed to allocate memory for index array during rehash.\n");
         free(new_buckets);
         return;
     }

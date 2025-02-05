@@ -1,10 +1,10 @@
 TARGETS = hacoo_test candecomp
 
-CC = clang
-override CFLAGS += -g -Wno-everything -pthread -lm -fopenmp
-CFLAGS += -I/home/linuxbrew/.linuxbrew/Cellar/cunit/2.1-3/include/
-LDLIBS=-lm -lcunit
-LDLIBS += -L/home/linuxbrew/.linuxbrew/Cellar/cunit/2.1-3/lib
+CC ?= clang
+CFLAGS += -g -Wno-everything -pthread -lm -fopenmp
+CFLAGS += `pkg-config cunit --cflags`
+LDLIBS=-lm 
+LDLIBS+= `pkg-config cunit --libs`
 
 HACOO = hacoo.o cpd.o matrix.o mttkrp.o
 
