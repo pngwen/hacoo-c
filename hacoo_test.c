@@ -85,10 +85,12 @@ void verify_mttkrp() {
 
     // Compare computed results with expected answers
     for (int i = 0; i < matrix_count; i++) {
+      if(i == 2) {
         printf("HaCOO-C Answer:\n");
         print_matrix(hacoo_mttkrp[i]);
-        printf("MATLAB Answer:\n");
-        print_matrix(mttkrp_ans[i]);
+      }
+        //printf("MATLAB Answer:\n");
+        //print_matrix(mttkrp_ans[i]);
         CU_ASSERT(are_matrices_equal(mttkrp_ans[i], hacoo_mttkrp[i]));
     }
 

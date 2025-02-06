@@ -116,7 +116,8 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
   // to hold nnz values
   double *t = (double *)malloc(sizeof(double) * h->nnz);
 
-  if (idx == NULL || tind == NULL || t == NULL) {
+  //if (idx == NULL || tind == NULL || t == NULL) {
+  if (tind == NULL || t == NULL) {
     fprintf(stderr, "Error: Memory allocation failed.\n");
     return NULL;
   }

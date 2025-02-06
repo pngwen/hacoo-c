@@ -64,9 +64,10 @@ void print_status(struct hacoo_tensor *t);
 /* Print the tensor hash table with COO listings */
 void print_tensor(struct hacoo_tensor *t);
 
-/* Save tensor to binary file (for testing purposes only) */
-int save_hacoo_tensor_to_file(const struct hacoo_tensor *tensor, const char *filename);
+/* Print the contents of a specific bucket in the tensor */
+void print_bucket(struct hacoo_tensor *t, int bucket_index);
+void print_bucket_from_ptr(struct hacoo_bucket *b, unsigned int ndims);
 
-struct hacoo_tensor *load_hacoo_tensor_from_file(const char *filename);
+void print_nth_nonzero(struct hacoo_tensor *t, int n);
 
 #endif

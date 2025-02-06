@@ -8,7 +8,19 @@
             "args": ["candecomp"],
             "group": {
                 "kind": "build",
-                "isDefault": true
+                "isDefault": false
+            },
+            "problemMatcher": ["$gcc"],
+            "detail": "Generated task to build the project using make."
+        },
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "make",
+            "args": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
             },
             "problemMatcher": ["$gcc"],
             "detail": "Generated task to build the project using make."

@@ -26,24 +26,21 @@
             "internalConsoleOptions": "openOnSessionStart"
         },
         {
-            "name": "Build and Debugandecomp hacoo_test (lldb)",
+            "name": "Build and Debug hacoo_test (gdb)",
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/hacoo_test",
-            "args": ["${input:factor} ${input:answers} ${input:hacoo_inputFile}"],
+            "args": ["${input:hacoo_inputFile}",
+                     "${input:factor}",
+                     "${input:answers}",
+                     "${input:mode}"
+                    ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
-            "MIMode": "lldb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for lldb",
-                    "text": "settings set target.pretty-printing true",
-                    "ignoreFailures": true
-                }
-            ],
+            "MIMode": "gdb",
             "logging": {
                 "engineLogging": true
             },
@@ -52,11 +49,11 @@
     ],
     "inputs": [
         {
-            "id": "inputFile",
+            "id": "hacoo_inputFile",
             "type": "promptString",
-            "description": "Enter the input file path",
-            "default": "test.tns"
-        }, 
+            "description": "Enter the tensor",
+            "default": "uber_test/uber_processed.txt"
+        },
         {
             "id": "factor",
             "type": "promptString",
@@ -70,10 +67,10 @@
             "default": "uber_test/mttkrp_answers.txt"
         },
         {
-            "id": "hacoo_inputFile",
+            "id": "mode",
             "type": "promptString",
-            "description": "Enter the input file path",
-            "default": "uber_test/uber.tns"
+            "description": "Serial (0) or parallel (1) mode",
+            "default": "0"
         }
     ]
 }

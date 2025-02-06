@@ -20,7 +20,39 @@ static void hacoo_compute_params(struct hacoo_tensor *t);
 static struct hacoo_bucket *hacoo_bucket_search(struct hacoo_bucket *b,
                                                 unsigned long long morton);
 static size_t hacoo_max_bits(unsigned int n);
-void print_bucket(struct hacoo_tensor *t, int bucket_index);
+
+#include <stdio.h>
+
+/* Print the nth nonzero element in the tensor */
+void print_nth_nonzero(struct hacoo_tensor *t, int n) {
+    if (n < 0 || n >= t->nnz) {
+        printf("Invalid nonzero index.\n");
+        return;
+    }
+
+    int count = 0;
+    struct hacoo_bucket *b;
+    unsigned int index[t->ndims];
+
+    /* Iterate over all buckets */
+    for (int i = 0; i < t->nbuckets; i++) {
+        for (b = t->buckets[i]; b; b = b->next) {
+            if (count == n) {
+                hacoo_extract_index(b, t->ndims, index);
+                printf("Nonzero %d:\n", n);
+                printf("0x%llx: ", b->morton);
+                for (int j = 0; j < t->ndims; j++) {
+                    printf("%u ", index[j]);
+                }
+                printf("%f\n", b->value);
+                return;
+            }
+            count++;
+        }
+    }
+
+    printf("Nonzero element not found (this should not happen).\n");
+}
 
 /* Print the contents of a specific bucket in the tensor */
 void print_bucket(struct hacoo_tensor *t, int bucket_index) {
@@ -48,6 +80,25 @@ void print_bucket(struct hacoo_tensor *t, int bucket_index) {
     }
 }
 
+/* Print the contents of a specific bucket */
+void print_bucket_from_ptr(struct hacoo_bucket *b, unsigned int ndims) {
+    if (!b) {
+        printf("Bucket is empty.\n");
+        return;
+    }
+
+    printf("\nBucket:\n=============\n");
+    unsigned int index[ndims];
+
+    for (; b; b = b->next) {
+        hacoo_extract_index(b, ndims, index);
+        printf("0x%llx: ", b->morton);
+        for (unsigned int j = 0; j < ndims; j++) {
+            printf("%u ", index[j]);
+        }
+        printf("%f\n", b->value);
+    }
+}
 
 /* Allocation and deallocation functions */
 struct hacoo_tensor *hacoo_alloc(unsigned int ndims, unsigned int *dims,
@@ -139,13 +190,18 @@ void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value)
   /* Check if the load limit has been exceeded*/
   if (t->nbuckets > 0 && ((double)t->nnz / (double)t->nbuckets) > ((double)t->load / 100.0)) {
     hacoo_rehash(&t);
-  }
+    if (t == NULL) {  // Ensure rehash was successful
+      fprintf(stderr, "Rehash failed, exiting.\n");
+      return;
+    }
+}
+
 }
 
 void hacoo_rehash(struct hacoo_tensor **t)
 {
-    //Allocate dummy tensor with new parameters
-      // Step 1: Allocate a new tensor with twice the number of buckets
+  //Allocate dummy tensor with new parameters
+  // Step 1: Allocate a new tensor with twice the number of buckets
   struct hacoo_tensor *dummy = hacoo_alloc((*t)->ndims, (*t)->dims, (*t)->nbuckets * 2, (*t)->load);
   hacoo_compute_params(dummy);
 
@@ -461,11 +517,6 @@ void file_entry(struct hacoo_tensor *t, FILE *file) {
       return;
     fscanf(file, "%u", &index[i]);
   }
-
-  //if FROSTT tensor, subtract 1 from everything
-  /*for(int i=0;i<t->ndims;i++) {
-    index[i] = index[i]-1;
-  }*/
 
   /* read the value */
   if (feof(file))

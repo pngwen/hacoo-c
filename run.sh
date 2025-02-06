@@ -8,9 +8,9 @@
 
 #Folder: mttkrp_test1
 #Serial
-./hacoo_test mttkrp_test1/sptensor_data.tns mttkrp_test1/factor_matrices.txt mttkrp_test1/mttkrp_answers.txt 0
+#./hacoo_test mttkrp_test1/sptensor_data.tns mttkrp_test1/factor_matrices.txt mttkrp_test1/mttkrp_answers.txt 0
 #Parallel
-./hacoo_test mttkrp_test1/sptensor_data.tns mttkrp_test1/factor_matrices.txt mttkrp_test1/mttkrp_answers.txt 1
+#./hacoo_test mttkrp_test1/sptensor_data.tns mttkrp_test1/factor_matrices.txt mttkrp_test1/mttkrp_answers.txt 1
 
 #Folder: mttkrp_test2
 #./hacoo_test mttkrp_test2/sptensor_data.tns mttkrp_test2/factor_matrices.txt mttkrp_test2/mttkrp_answers.txt 0
@@ -21,11 +21,7 @@
 #Folder: mttkrp_test4 (rehash test)
 #./hacoo_test mttkrp_test4/sptensor_data.tns mttkrp_test4/factor_matrices.txt mttkrp_test4/mttkrp_answers.txt 0
 
-#MAKE SURE YOU UNCOMMENT CODE THAT SUBTRACTS 1 FROM INDEXES
-#DID YOU READ THAT
-#
-#
 #Folder: mttkrp_test5 (index fixing test)
 #./hacoo_test mttkrp_test5/sptensor_data.tns mttkrp_test5/factor_matrices.txt mttkrp_test5/mttkrp_answers.txt 0
 
-#./hacoo_test uber_test/uber.tns uber_test/factor_matrices.txt uber_test/mttkrp_answers.txt 0
+./hacoo_test uber_test/uber.tns uber_test/factor_matrices.txt uber_test/mttkrp_answers.txt 0
