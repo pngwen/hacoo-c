@@ -52,7 +52,7 @@
             "id": "hacoo_inputFile",
             "type": "promptString",
             "description": "Enter the tensor",
-            "default": "uber_test/uber_processed.txt"
+            "default": "uber_test/uber_processed.tns"
         },
         {
             "id": "factor",
