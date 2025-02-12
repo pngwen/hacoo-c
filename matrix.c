@@ -99,7 +99,7 @@ matrix_t *free_matrix(matrix_t *m) {
   for (int x = 0; x < m->rows; x++) {
     free(m->vals[x]);
   }
-  free(m->vals); //dummy
+  free(m->vals);
 }
 
 // Function to read matrices from a file into an array of matrix_t pointers

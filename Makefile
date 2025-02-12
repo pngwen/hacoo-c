@@ -1,20 +1,23 @@
-TARGETS = hacoo_test candecomp
+all: main
 
 CC = clang
-override CFLAGS += -g -Wno-everything -pthread -lm -fopenmp
-CFLAGS += -I/home/linuxbrew/.linuxbrew/Cellar/cunit/2.1-3/include/
-LDLIBS=-lm -lcunit
-LDLIBS += -L/home/linuxbrew/.linuxbrew/Cellar/cunit/2.1-3/lib
+override CFLAGS += -g -Wno-everything -pthread -lm
+LDLIBS=-lm -lcunit -fopenmp
 
-HACOO = hacoo.o cpd.o matrix.o mttkrp.o
+SRCS = $(shell find . -name '.ccls-cache' -type d -prune -o -type f -name '*.c' -print)
+HEADERS = $(shell find . -name '.ccls-cache' -type d -prune -o -type f -name '*.h' -print)
 
-all: hacoo_test candecomp
+main: $(SRCS) $(HEADERS)
+	$(CC) $(CFLAGS) $(SRCS) -o "$@" $(LDLIBS)
 
-hacoo_test: hacoo_test.o $(HACOO)
+main-debug: $(SRCS) $(HEADERS)
+	$(CC) $(CFLAGS) -O0 $(SRCS) -o "$@" $(LDLIBS)
+
+hacoo_test: hacoo.o hacoo_test.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-candecomp: candecomp.o $(HACOO) 
+candecomp: candecomp.o hacoo.o matrix.o cpd.o mttkrp.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 clean:
-	rm -f $(TARGETS) *.o
+	rm -f main main-debug hacoo_test *.o
