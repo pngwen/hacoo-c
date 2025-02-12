@@ -1,15 +1,16 @@
-#include "CUnit/Basic.h"
+//#include "CUnit/Basic.h"
 #include "hacoo.h"
 #include "matrix.h"
 #include "mttkrp.h"
 #include <CUnit/CUnit.h>
+#include <CUnit/Basic.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 /* Define function pointer type for MTTKRP */
-typedef matrix_t *(*mttkrp_func_t)(struct hacoo_tensor *, matrix_t **, int);
+typedef matrix_t *(*mttkrp_func_t)(struct hacoo_tensor *, matrix_t **, unsigned int);
 
 /* Basic read tensor test */
 void read_and_print(int argc, char *argv[]);
@@ -126,7 +127,7 @@ void CUnit_mttkrp() {
       printf("Running Parallel MTTKRP Test\n");
     } else {
       printf("Invalid mode. Quitting. \n");
-      return NULL;
+      return;
     }
 
     CU_add_test(pSuite, "MTTKRP", verify_mttkrp);

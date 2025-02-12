@@ -24,4 +24,4 @@
 #Folder: mttkrp_test5 (index fixing test)
 #./hacoo_test mttkrp_test5/sptensor_data.tns mttkrp_test5/factor_matrices.txt mttkrp_test5/mttkrp_answers.txt 0
 
-./hacoo_test uber_test/uber.tns uber_test/factor_matrices.txt uber_test/mttkrp_answers.txt 0
+./hacoo_test uber_test/uber_processed.tns uber_test/factor_matrices.txt uber_test/mttkrp_answers.txt 0
