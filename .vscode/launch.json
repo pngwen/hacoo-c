@@ -2,6 +2,30 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Build and Debug index encoding/decoding (gdb)",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/candecomp",
+            "args": ["${input:inputFile}"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for lldb",
+                    "text": "settings set target.pretty-printing true",
+                    "ignoreFailures": true
+                }
+            ],
+            "logging": {
+                "engineLogging": true
+            },
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
             "name": "Build and Debug candecomp (lldb)",
             "type": "cppdbg",
             "request": "launch",

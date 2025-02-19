@@ -19,9 +19,9 @@
 #./hacoo_test  mttkrp_test3/sptensor_data.tns mttkrp_test3/factor_matrices.txt mttkrp_test3/mttkrp_answers.txt 0
 
 #Folder: mttkrp_test4 (rehash test)
-#./hacoo_test mttkrp_test4/sptensor_data.tns mttkrp_test4/factor_matrices.txt mttkrp_test4/mttkrp_answers.txt 0
+./hacoo_test mttkrp_test4/sptensor_data.tns mttkrp_test4/factor_matrices.txt mttkrp_test4/mttkrp_answers.txt 0
 
 #Folder: mttkrp_test5 (index fixing test)
 #./hacoo_test mttkrp_test5/sptensor_data.tns mttkrp_test5/factor_matrices.txt mttkrp_test5/mttkrp_answers.txt 0
 
-./hacoo_test uber_test/uber_processed.tns uber_test/factor_matrices.txt uber_test/mttkrp_answers.txt 0
+#./hacoo_test uber_test/uber_processed.tns uber_test/factor_matrices.txt uber_test/mttkrp_answers.txt 0

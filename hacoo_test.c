@@ -31,13 +31,13 @@ mttkrp_func_t selected_mttkrp_func;
 
 int main(int argc, char *argv[]) {
 
-  //read_and_print(argc,argv);
+  read_and_print(argc,argv);
 
   // Store command-line arguments for CUnit access
   global_argc = argc;
   global_argv = argv;
 
-  CUnit_mttkrp();
+  //CUnit_mttkrp();
 
   return 0;
 }
