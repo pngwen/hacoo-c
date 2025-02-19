@@ -31,13 +31,13 @@ mttkrp_func_t selected_mttkrp_func;
 
 int main(int argc, char *argv[]) {
 
-  read_and_print(argc,argv);
+  //read_and_print(argc,argv);
 
   // Store command-line arguments for CUnit access
   global_argc = argc;
   global_argv = argv;
 
-  //CUnit_mttkrp();
+  CUnit_mttkrp();
 
   return 0;
 }
@@ -52,6 +52,7 @@ void verify_mttkrp() {
     const char *tensor_filename = global_argv[1];
     const char *factor_matrix_filename = global_argv[2];
     const char *mttkrp_filename = global_argv[3];
+    //TODO: const int base = (int) global_argv[5];
 
     // Read factor matrices
     matrix_t **factor_matrices = NULL;
@@ -86,13 +87,16 @@ void verify_mttkrp() {
 
     // Compare computed results with expected answers
     for (int i = 0; i < matrix_count; i++) {
-      if(i == 2) {
+      if(are_matrices_equal(mttkrp_ans[i], hacoo_mttkrp[i])) {
+        CU_PASS("MTTKRP over mode i succeeded.\n");
+      } else {
+        CU_FAIL("MTTKRP over mode i failed");
+        printf("Failure over Mode %d.\n", i+1);
         printf("HaCOO-C Answer:\n");
         print_matrix(hacoo_mttkrp[i]);
+        printf("MATLAB Answer:\n");
+        print_matrix(mttkrp_ans[i]);
       }
-        //printf("MATLAB Answer:\n");
-        //print_matrix(mttkrp_ans[i]);
-        CU_ASSERT(are_matrices_equal(mttkrp_ans[i], hacoo_mttkrp[i]));
     }
 
     // Free allocated memory

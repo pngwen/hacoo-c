@@ -62,6 +62,3 @@ dkms.conf
 .ccls-cache/
 .breakpoints
 .cache
-
-#other
-*.txt

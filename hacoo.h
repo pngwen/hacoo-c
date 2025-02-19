@@ -4,6 +4,7 @@
 #ifndef HACOO_H
 #define HACOO_H
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 
 struct hacoo_bucket {
@@ -22,6 +23,7 @@ struct hacoo_tensor {
   unsigned int sx;
   unsigned int sy;
   unsigned int sz;
+  //unsigned int base; //index base
 };
 
 /* Allocation and deallocation functions */

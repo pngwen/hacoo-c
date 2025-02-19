@@ -5,6 +5,7 @@
 #   global_argv[2] - name of file to read factor matrices from
 #   global_argv[3] - name of file to read mttkrp results from
 #   global_argv[4] - MTTKRP mode: 0 for serial, 1 for parallel
+#   (NOT IMPLEMENTED) global_argv[5] - number tensor indexes begin from. 0 for base-0, 1 for base-1
 
 #Folder: mttkrp_test1
 #Serial
@@ -19,9 +20,6 @@
 #./hacoo_test  mttkrp_test3/sptensor_data.tns mttkrp_test3/factor_matrices.txt mttkrp_test3/mttkrp_answers.txt 0
 
 #Folder: mttkrp_test4 (rehash test)
-./hacoo_test mttkrp_test4/sptensor_data.tns mttkrp_test4/factor_matrices.txt mttkrp_test4/mttkrp_answers.txt 0
+#./hacoo_test mttkrp_test4/sptensor_data.tns mttkrp_test4/factor_matrices.txt mttkrp_test4/mttkrp_answers.txt 0
 
-#Folder: mttkrp_test5 (index fixing test)
-#./hacoo_test mttkrp_test5/sptensor_data.tns mttkrp_test5/factor_matrices.txt mttkrp_test5/mttkrp_answers.txt 0
-
-#./hacoo_test uber_test/uber_processed.tns uber_test/factor_matrices.txt uber_test/mttkrp_answers.txt 0
+./hacoo_test uber_test/uber_processed.tns uber_test/factor_matrices.txt uber_test/mttkrp_answers.txt 0

@@ -1,0 +1,30 @@
+Running Serial MTTKRP Test
+
+
+     CUnit - A unit testing framework for C - Version 2.1-3
+     http://cunit.sourceforge.net/
+
+Rehashing completed. tensor has 90 nnz and 256 buckets.
+Rehashing completed. tensor has 180 nnz and 512 buckets.
+Rehashing completed. tensor has 359 nnz and 1024 buckets.
+Rehashing completed. tensor has 717 nnz and 2048 buckets.
+Rehashing completed. tensor has 1434 nnz and 4096 buckets.
+Rehashing completed. tensor has 2868 nnz and 8192 buckets.
+Rehashing completed. tensor has 5735 nnz and 16384 buckets.
+Rehashing completed. tensor has 11469 nnz and 32768 buckets.
+Rehashing completed. tensor has 22938 nnz and 65536 buckets.
+Rehashing completed. tensor has 45876 nnz and 131072 buckets.
+Rehashing completed. tensor has 91751 nnz and 262144 buckets.
+Rehashing completed. tensor has 183501 nnz and 524288 buckets.
+Rehashing completed. tensor has 367002 nnz and 1048576 buckets.
+Rehashing completed. tensor has 734004 nnz and 2097152 buckets.
+Rehashing completed. tensor has 1468007 nnz and 4194304 buckets.
+Rehashing completed. tensor has 2936013 nnz and 8388608 buckets.
+
+
+Run Summary:    Type  Total    Ran Passed Failed Inactive
+              suites      1      1    n/a      0        0
+               tests      1      1      1      0        0
+             asserts      6      6      6      0      n/a
+
+Elapsed time =   23.091 seconds

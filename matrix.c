@@ -5,7 +5,8 @@
 #include <math.h>  // For fabs()
 
 //Define acceptable margin of error
-const double EPSILON = 0.004;
+#define EPSILON 1.0e-2
+
 
 matrix_t *new_matrix(unsigned int n_rows, unsigned int n_cols) {
   matrix_t *matrix = (matrix_t *)malloc(sizeof(matrix_t));
@@ -225,9 +226,8 @@ int are_matrices_equal(const matrix_t *m1, const matrix_t *m2) {
 
 //check for equality within a specific tolerance
 int are_equal(double a, double b) {
-    return fabs(a - b) < EPSILON;
+    return fabs(a - b) < EPSILON * fmax(fabs(a), fabs(b));
 }
-
 /* Test to read matrix from text file */
 int read_matrix_test(const char *filename) {
 

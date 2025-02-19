@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
 #define LOAD 70
@@ -13,7 +14,7 @@
 /* Helper Function Prototypes */
 static void hacoo_free_buckets(struct hacoo_tensor *t);
 static void free_buckets(struct hacoo_bucket **buckets, int nbuckets);
-static unsigned long long hacoo_morton(unsigned int n, unsigned int *index);
+static uint64_t hacoo_morton(unsigned int n, unsigned int *index);
 static size_t hacoo_bucket_index(struct hacoo_tensor *t,
                                  unsigned long long morton);
 static void hacoo_compute_params(struct hacoo_tensor *t);
@@ -281,7 +282,7 @@ void hacoo_rehash(struct hacoo_tensor **t)
   hacoo_free(dummy);
   free(index);
 
-  printf("Rehashing completed. tensor has %d nnz and %d buckets.\n",(*t)->nnz,(*t)->nbuckets);
+  //printf("Rehashing completed. tensor has %d nnz and %d buckets.\n",(*t)->nnz,(*t)->nbuckets);
 }
 
 
@@ -298,27 +299,24 @@ double hacoo_get(struct hacoo_tensor *t, unsigned int *index)
   return 0.0;
 }
 
-/* extract the index from a bucket */
+/* Extract the index from a bucket */
 void hacoo_extract_index(struct hacoo_bucket *b, unsigned int n,
                          unsigned int *index)
 {
-  size_t max_bits = hacoo_max_bits(n);
+    size_t max_bits = hacoo_max_bits(n);
 
-  // Initialize the index array
-  for (unsigned int i = 0; i < n; i++)
-  {
-    index[i] = 0;
-  }
-  // De-interleave the morton code bits into the index array
-  for (unsigned int bit = 0; bit < max_bits; bit++)
-  {
-    for (unsigned int i = 0; i < n; i++)
-    {
-      index[i] |= ((b->morton >> (bit * n + i)) & 1) << bit;
+    // Initialize the index array
+    for (unsigned int i = 0; i < n; i++) {
+        index[i] = 0;
     }
-  }
-}
 
+    // De-interleave the Morton code bits into the index array
+    for (unsigned int bit = 0; bit < max_bits; bit++) {
+        for (unsigned int i = 0; i < n; i++) {
+            index[i] |= ((b->morton >> (bit * n + i)) & 1) << bit;
+        }
+    }
+}
 
 /* Helper function implementations. */
 static void hacoo_free_buckets(struct hacoo_tensor *t)
@@ -362,20 +360,18 @@ static void free_buckets(struct hacoo_bucket **buckets, int nbuckets)
 
 // Encodes index, returns morton code
 // n: ndimensions
-static unsigned long long hacoo_morton(unsigned int n, unsigned int *index)
+static uint64_t hacoo_morton(unsigned int n, unsigned int *index)
 {
-  unsigned long long m = 0;
-  size_t max_bits = hacoo_max_bits(n);
+    uint64_t m = 0;
+    size_t max_bits = hacoo_max_bits(n);
 
-  for (unsigned int bit = 0; bit < max_bits; bit++)
-  {
-    for (unsigned int i = 0; i < n; i++)
-    {
-      m |= ((index[i] >> bit) & 1) << (bit * n + i);
+    for (unsigned int bit = 0; bit < max_bits; bit++) {
+        for (unsigned int i = 0; i < n; i++) {
+            m |= ((uint64_t)((index[i] >> bit) & 1)) << (bit * n + i);
+        }
     }
-  }
 
-  return m;
+    return m;
 }
 
 static size_t hacoo_bucket_index(struct hacoo_tensor *t,
@@ -418,10 +414,10 @@ static struct hacoo_bucket *hacoo_bucket_search(struct hacoo_bucket *b,
 
 static size_t hacoo_max_bits(unsigned int n)
 {
-  size_t b1 = sizeof(unsigned long long) * 8 / n;
-  size_t b2 = sizeof(unsigned int) * 8;
+    size_t b1 = sizeof(uint64_t) * 8 / n;
+    size_t b2 = sizeof(unsigned int) * 8;
 
-  return b1 < b2 ? b1 : b2;
+    return b1 < b2 ? b1 : b2;
 }
 
 /*Allocate a new hacoo bucket. Its next points to NULL if a next bucket does not
@@ -517,6 +513,14 @@ void file_entry(struct hacoo_tensor *t, FILE *file) {
       return;
     fscanf(file, "%u", &index[i]);
   }
+
+  /*if indexes are base-1, like FROSTT tensors,
+  then subtract 1 from everything*/
+  /*if(t->base == 1) {
+    for (int i = 0; i < t->ndims; i++) {
+      index[i] -= index[i];
+    }
+  }*/
 
   /* read the value */
   if (feof(file))
