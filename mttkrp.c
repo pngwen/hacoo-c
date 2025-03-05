@@ -20,8 +20,6 @@ Returns:
 #include <omp.h>
 #include <stdio.h>
 
-#define NUM_THREADS 3
-
 matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
 
     // Number of columns in factor matrices
@@ -30,6 +28,10 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
     // Create the global result array
     matrix_t *res = new_matrix(h->dims[n], fmax);
 
+    // Gets the value from OMP_NUM_THREADS
+    const int NUM_THREADS = omp_get_max_threads();
+    printf("Max threads: %d\n", NUM_THREADS);
+    
     omp_set_num_threads(NUM_THREADS);
 
     // Start OpenMP parallel region

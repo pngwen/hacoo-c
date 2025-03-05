@@ -1,25 +1,20 @@
 #!/bin/bash
 
-#   Run main with the following arguments:
-#   global_argv[1] - name of file with tensor data in COO fromat, dimensions on first line
-#   global_argv[2] - name of file to read factor matrices from
-#   global_argv[3] - name of file to read mttkrp results from
-#   global_argv[4] - MTTKRP mode: 0 for serial, 1 for parallel
-#   (NOT IMPLEMENTED) global_argv[5] - number tensor indexes begin from. 0 for base-0, 1 for base-1
+# Define folder and tensor names
+folder_name="$1"
+tensor_name="$1_processed.txt"
 
-#Folder: mttkrp_test1
-#Serial
-#./hacoo_test mttkrp_test1/sptensor_data.tns mttkrp_test1/factor_matrices.txt mttkrp_test1/mttkrp_answers.txt 0
-#Parallel
-#./hacoo_test mttkrp_test1/sptensor_data.tns mttkrp_test1/factor_matrices.txt mttkrp_test1/mttkrp_answers.txt 1
+# Define variables for input files and execution mode
+data_file="MTTKRP_test/$folder_name/$tensor_name"
+factor_matrices_file="MTTKRP_test/$folder_name/factor_matrices.txt"
+mttkrp_results_file="MTTKRP_test/$folder_name/mttkrp_answers.txt"
+mttkrp_mode="$2" #0 for serial, 1 parallel
 
-#Folder: mttkrp_test2
-#./hacoo_test mttkrp_test2/sptensor_data.tns mttkrp_test2/factor_matrices.txt mttkrp_test2/mttkrp_answers.txt 0
+# Check if the required arguments are provided
+if [ "$#" -lt 2 ]; then
+    echo "Usage: $0 <folder_name> <mttkrp_mode>"
+    exit 1
+fi
 
-#Folder: mttkrp_test3 (1 based to 0-based calc MATLAB script, subtracts 1 from all indexes in hacoo.c library)
-#./hacoo_test  mttkrp_test3/sptensor_data.tns mttkrp_test3/factor_matrices.txt mttkrp_test3/mttkrp_answers.txt 0
-
-#Folder: mttkrp_test4 (rehash test)
-#./hacoo_test mttkrp_test4/sptensor_data.tns mttkrp_test4/factor_matrices.txt mttkrp_test4/mttkrp_answers.txt 0
-
-./hacoo_test uber_test/uber_processed.tns uber_test/factor_matrices.txt uber_test/mttkrp_answers.txt 0
+# Execute the hacoo_test program with the provided arguments
+./hacoo_test "$data_file" "$factor_matrices_file" "$mttkrp_results_file" "$mttkrp_mode"
