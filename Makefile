@@ -19,5 +19,8 @@ hacoo_test: hacoo.o hacoo_test.o matrix.o mttkrp.o
 candecomp: candecomp.o hacoo.o matrix.o cpd.o mttkrp.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
+matrix_op_test: matrix_op_test.o matrix.o
+	$(CC) $(CFLAGS) -o $@ $^ -lm
+
 clean:
 	rm -f main main-debug hacoo_test *.o
