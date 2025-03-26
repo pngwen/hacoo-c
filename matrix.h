@@ -64,8 +64,17 @@ void mul_matrix(matrix_t *res, matrix_t *a, matrix_t *b);
 /* Perform the matrix multiplication RES = A' * B */
 void mul_transpose_matrix(matrix_t *res, matrix_t *a, matrix_t *b);
 
+/* Multiply each element in the matrix by a scalar */
+void scale_matrix(matrix_t *m, double scalar);
+
 /* Calculate the inverse of the matrix RES = A^-1 */
 void invert_matrix(matrix_t *res, matrix_t *a);
+
+/* Fill in the identity matrix to an existing matrix */
+void fill_identity_matrix(matrix_t *m);
+
+/* Fill a matrix with a number */
+void fill_matrix(matrix_t *m, double val);
 
 /* basic test for matrix functions */
 void matrix_test();

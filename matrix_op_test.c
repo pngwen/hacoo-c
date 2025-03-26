@@ -26,10 +26,12 @@ int main()
 
 
     printf("\nMultiplication Test\n");
+    fill_matrix(res, 0);
     mul_matrix(res, m3, m4);
     print_matrix(res);
 
     printf("\nTranspose mul test\n");
+    fill_matrix(res, 0);
     mul_transpose_matrix(res, m3, m4);
     print_matrix(res);
 

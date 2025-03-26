@@ -559,3 +559,18 @@ void print_tensor(struct hacoo_tensor *t)
     }
   }
 }
+
+/* Calculate the frobenius norm of the tensor */
+double frobenius_norm(struct hacoo_tensor *t)
+{
+    double norm = 0.0;
+    struct hacoo_bucket *b;
+    for (int i = 0; i < t->nbuckets; i++)
+    {
+        for (b = t->buckets[i]; b; b = b->next)
+        {
+        norm += b->value * b->value;
+        }
+    }
+    return sqrt(norm);
+}

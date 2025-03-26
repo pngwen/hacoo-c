@@ -72,4 +72,7 @@ void print_bucket_from_ptr(struct hacoo_bucket *b, unsigned int ndims);
 
 void print_nth_nonzero(struct hacoo_tensor *t, int n);
 
+/* Calculate the frobenius norm of the tensor */
+double frobenius_norm(struct hacoo_tensor *t);
+
 #endif

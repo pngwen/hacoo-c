@@ -285,7 +285,6 @@ void mul_matrix(matrix_t *res, matrix_t *a, matrix_t *b)
     {
         for (int j = 0; j < b->cols; j++)
         {
-            res->vals[i][j] = 0;
             for (int k = 0; k < a->cols; k++)
             {
                 res->vals[i][j] += a->vals[i][k] * b->vals[k][j];
@@ -300,7 +299,6 @@ void mul_transpose_matrix(matrix_t *res, matrix_t *a, matrix_t *b)
     {
         for (int j = 0; j < b->cols; j++)
         {
-            res->vals[i][j] = 0;
             for (int k = 0; k < a->rows; k++)
             {
                 res->vals[i][j] += a->vals[k][i] * b->vals[k][j];
@@ -308,6 +306,20 @@ void mul_transpose_matrix(matrix_t *res, matrix_t *a, matrix_t *b)
         }
     }
 }
+
+
+/* Multiply each element in the matrix by a scalar */
+void scale_matrix(matrix_t *m, double scalar)
+{
+    for (int i = 0; i < m->rows; i++)
+    {
+        for (int j = 0; j < m->cols; j++)
+        {
+            m->vals[i][j] *= scalar;
+        }
+    }
+}
+
 
 void invert_matrix(matrix_t *res, matrix_t *a)
 {
@@ -411,3 +423,35 @@ void print_matrix_column(matrix_t *matrix, int col_index) {
     }
     printf("]\n");
 }
+
+
+/* Fill in the identity matrix to an existing matrix */
+void fill_identity_matrix(matrix_t *m)
+{
+    for(int i=0; i<m->rows; i++)
+    {
+        for(int j=0; j<m->cols; j++)
+        {
+            if(i == j)
+            {
+                m->vals[i][j] = 1;
+            }
+            else
+            {
+                m->vals[i][j] = 0;
+            }
+        }
+    }
+}
+
+/* Fill a matrix with a number */
+void fill_matrix(matrix_t *m, double val)
+{
+    for(int i=0; i<m->rows; i++)
+    {
+        for(int j=0; j<m->cols; j++)
+        {
+            m->vals[i][j] = val;
+        }
+    }
+}   
