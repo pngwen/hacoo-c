@@ -1,8 +1,0 @@
-Running Parallel MTTKRP Test
-
-
-     CUnit - A unit testing framework for C - Version 2.1-3
-     http://cunit.sourceforge.net/
-
-Max threads: -246998345
-Max threads: 1

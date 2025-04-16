@@ -62,6 +62,45 @@ matrix_t* copy_matrix(matrix_t *original) {
     return copy;
 }
 
+/* Copy multiple matrices to newly allocated matrices */
+matrix_t** copy_matrices(matrix_t **originals, size_t num_matrices) {
+    // Allocate memory for the array of matrix pointers
+    matrix_t **copies = malloc(num_matrices * sizeof(matrix_t *));
+    if (!copies) {
+        return NULL; // Allocation failed
+    }
+
+    for (size_t k = 0; k < num_matrices; k++) {
+        matrix_t *original = originals[k];
+        if (!original) {
+            copies[k] = NULL;
+            continue;
+        }
+
+        // Create a new matrix with the same dimensions
+        matrix_t *copy = new_matrix(original->rows, original->cols);
+        if (!copy) {
+            // Clean up previously allocated matrices
+            for (size_t j = 0; j < k; j++) {
+                free_matrix(copies[j]);
+            }
+            free(copies);
+            return NULL;
+        }
+
+        // Copy the data
+        for (size_t i = 0; i < original->rows; i++) {
+            for (size_t j = 0; j < original->cols; j++) {
+                copy->vals[i][j] = original->vals[i][j];
+            }
+        }
+
+        copies[k] = copy;
+    }
+
+    return copies;
+}
+
 void print_matrix(matrix_t *m) {
   //printf("Matrix: (%d x % d)\n", m->rows, m->cols);
   for (int x = 0; x < m->rows; x++) {
@@ -395,11 +434,24 @@ void invert_matrix(matrix_t *res, matrix_t *a)
 }
 
 /* Print 1-D Array */
-
-void print_array(double *arr, int size) {
+void print_array(void *arr, int size, char type) {
     printf("Array: [");
     for (int i = 0; i < size; i++) {
-        printf("%d", arr[i]);
+        switch (type) {
+            case 'f':  // double
+                printf("%.2f", ((double *)arr)[i]);
+                break;
+            case 'd':  // int or unsigned int
+                printf("%d", ((int *)arr)[i]);
+                break;
+            case 'u':  // explicitly unsigned int
+                printf("%u", ((unsigned int *)arr)[i]);
+                break;
+            default:
+                printf("?");
+                break;
+        }
+
         if (i < size - 1) {
             printf(", ");
         }

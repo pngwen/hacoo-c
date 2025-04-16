@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
   // Store command-line arguments for CUnit access
   global_argc = argc;
   global_argv = argv;
-
+  //read_and_print(argc,argv);
   CUnit_mttkrp();
 
   return 0;

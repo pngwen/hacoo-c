@@ -1,5 +1,10 @@
 #!/bin/bash
 
+#usage: ./run.sh uber 0 to run hacoo_test using serial mttkrp algorithm
+#args:
+#1) name of tensor
+#2) mttkrp mode: 0 for serial, 1 parallel
+
 # Define folder and tensor names
 folder_name="$1"
 tensor_name="$1_processed.txt"

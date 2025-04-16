@@ -29,6 +29,9 @@ matrix_t *array_to_matrix(double *data, unsigned int n_rows, unsigned int n_cols
 /* Copy contents of one matrix to a newly allocated matrix */
 matrix_t *copy_matrix(matrix_t *m);
 
+/* Copy multiple matrices to newly allocated matrices */
+matrix_t** copy_matrices(matrix_t **originals, size_t num_matrices);
+
 /* Print values of a matrix */
 void print_matrix(matrix_t *m);
 
@@ -80,7 +83,7 @@ void fill_matrix(matrix_t *m, double val);
 void matrix_test();
 
 /* Print 1-D array */
-void print_array(double *arr, int size);
+void print_array(void *arr, int size, char type);
 
 void locate_zeroes(double *arr, int size);
 
