@@ -54,10 +54,8 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/hacoo_test",
+            "program": "${workspaceFolder}/run.sh",
             "args": ["${input:hacoo_inputFile}",
-                     "${input:factor}",
-                     "${input:answers}",
                      "${input:mode}"
                     ],
             "stopAtEntry": false,
@@ -75,20 +73,8 @@
         {
             "id": "hacoo_inputFile",
             "type": "promptString",
-            "description": "Enter the tensor",
-            "default": "uber_test/uber_processed.tns"
-        },
-        {
-            "id": "factor",
-            "type": "promptString",
-            "description": "Enter the factor",
-            "default": "uber_test/factor_matrices.txt"
-        },
-        {
-            "id": "answers",
-            "type": "promptString",
-            "description": "Enter the answers",
-            "default": "uber_test/mttkrp_answers.txt"
+            "description": "Enter the name of tensor",
+            "default": "uber"
         },
         {
             "id": "mode",

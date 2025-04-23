@@ -435,7 +435,7 @@ void invert_matrix(matrix_t *res, matrix_t *a)
 
 /* Print 1-D Array */
 void print_array(void *arr, int size, char type) {
-    printf("Array: [");
+    printf("[");
     for (int i = 0; i < size; i++) {
         switch (type) {
             case 'f':  // double
@@ -506,4 +506,4 @@ void fill_matrix(matrix_t *m, double val)
             m->vals[i][j] = val;
         }
     }
-}   
+}

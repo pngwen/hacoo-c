@@ -21,7 +21,7 @@ Returns:
 #include <stdio.h>
 
 //#define NUM_THREADS 132
-#define NUM_THREADS 1
+#define NUM_THREADS 2
 
 matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
 
@@ -55,8 +55,8 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
 
       //anticipated maximum # of nnz per thread. 
       //if this is exceeded, copy over to array double the size
-      size_t MAX_NNZ_PER_THREAD = 8;
-      //size_t MAX_NNZ_PER_THREAD = h->nnz/h->nbuckets;
+      //size_t MAX_NNZ_PER_THREAD = 8;
+      size_t MAX_NNZ_PER_THREAD = h->nbuckets/h->nnz;
 
 			// Allocate thread-local variables
       //need a copy of factor matrices?
@@ -65,7 +65,7 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
       unsigned int *idx = (unsigned int *)calloc(h->ndims, sizeof(unsigned int));
       unsigned int *tind = (unsigned int *)calloc(MAX_NNZ_PER_THREAD, sizeof(unsigned int));
       double *t = (double *)calloc(MAX_NNZ_PER_THREAD, sizeof(double));
-      print_array(t,MAX_NNZ_PER_THREAD,'f');
+      //print_array(t,MAX_NNZ_PER_THREAD,'f');
 
 			matrix_t *local_res = new_matrix(h->dims[n], fmax); // Local result matrix
 
@@ -78,93 +78,77 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
       }
 
 			// Divide work among threads by columns
-      for (int f = thread_id; f < h->nbuckets; f += num_threads) {
+      for (int i = thread_id; i < h->nbuckets; i += num_threads) {
         //printf("My thread id: %d\n",thread_id);
         //printf("f: %d\n", f);
 
-        if (!h->buckets[f]) {
+        if (!h->buckets[i]) {
           continue; // Skip empty buckets
         }
 
         struct hacoo_bucket *cur;
-        for (cur = h->buckets[f]; cur; cur = cur->next) {
+        for (cur = h->buckets[i]; cur; cur = cur->next) {
           hacoo_extract_index(cur, h->ndims, idx);
-          printf("extracted index: [%d %d %d]\n", idx[0],idx[1],idx[2]);
+          //printf("extracted index: [%d %d %d]\n", idx[0],idx[1],idx[2]);
 
           //check if we've exceeded the # of anticipated nnz per thread.
           //if so, copy current t & tind to new array double the size
+          //NEED TO FIX THIS
           if(z > MAX_NNZ_PER_THREAD) {
             printf("exceeded nnz per thread, doubling size...\n");
-            //allocate new larger arrays
-            unsigned int *new_tind = (unsigned int *)malloc(sizeof(unsigned int) * (2*MAX_NNZ_PER_THREAD));
-			      double *new_t = (double *)malloc(sizeof(double) * (2*MAX_NNZ_PER_THREAD));
-
-            if (new_tind == NULL || new_t == NULL) {
-                fprintf(stderr, "Memory allocation failed\n");
-                free(idx);
-                free(tind);
-                free(t);
-                free(local_res);
-            }
-
-            // Copy elements from the original array to the new one
-            memcpy(new_tind, tind, sizeof(unsigned int) * MAX_NNZ_PER_THREAD);
-            memcpy(new_t, t, sizeof(double) * MAX_NNZ_PER_THREAD);
-
-            // Free the original arrays
-            free(tind);
-            free(t);
-
-            // Reassign the original pointer to the new arrays
-            tind = new_tind;
-            t = new_t;
-           
+            resizeIntArray(&tind, MAX_NNZ_PER_THREAD);
+            resizeDoubleArray(&t, MAX_NNZ_PER_THREAD);
+            
             //double the size for this thread
             MAX_NNZ_PER_THREAD *=2;
+            print_array(tind,MAX_NNZ_PER_THREAD,'d');
+            print_array(t,MAX_NNZ_PER_THREAD,'f');
+
           }
 
-          printf("z: %d\n",z);
-          printf("curr value: %f\n",cur->value);
+          //printf("z: %d\n",z);
+          //printf("curr value: %f\n",cur->value);
           t[z] = cur->value;
-          printf("After setting t[%d] = %f\n", z,t[z]);
-          print_array(t,MAX_NNZ_PER_THREAD,'f');
+          //printf("After setting t[%d] = %f\n", z,t[z]);
+          //print_array(t,MAX_NNZ_PER_THREAD,'f');
 
           tind[z] = idx[n];
-          printf("idx[%d] = %d\n",n,idx[n]);
+          /*printf("idx[%d] = %d\n",n,idx[n]);
           printf("after setting tind[%d] = %d\n", z,tind[z]);
-          print_array(tind,MAX_NNZ_PER_THREAD,'d');
+          print_array(tind,MAX_NNZ_PER_THREAD,'d');*/
 
           for (int b = 0; b < h->ndims; b++) {
             if (b == n) continue; // Skip the unfolded mode
             //does each thread need a copy of u?
             //printf("factor matrix %d\n",b);
             //print_matrix(local_u[b]);
-            printf("before multiplying value by factor matrix:\n");
-            print_array(t,MAX_NNZ_PER_THREAD,'f');
+            //printf("before multiplying value by factor matrix:\n");
+            //print_array(t,MAX_NNZ_PER_THREAD,'f');
             t[z] *= local_u[b]->vals[idx[b]][f];
-            printf("t[%d] *= local_u[%d]->vals[idx[%d]][%d] = %f *= %f\n",z,b,b,f,t[z],local_u[b]->vals[idx[b]][f]);
-            printf("after multiplying value by factor matrix:\n");
-            print_array(t,MAX_NNZ_PER_THREAD,'f');
+            //printf("t[%d] *= local_u[%d]->vals[idx[%d]][%d] = %f *= %f\n",z,b,b,f,t[z],local_u[b]->vals[idx[b]][f]);
+            //printf("after multiplying value by factor matrix:\n");
+            //print_array(t,MAX_NNZ_PER_THREAD,'f');
           }
           z++; //advance to the next nnz
-
-          for(int p=0;p<z;p++) {
-          printf("\n----------------------\n");
-          printf("my thread id: %d\n",thread_id);
-          printf("t array:\n");
-          print_array(t,MAX_NNZ_PER_THREAD,'f');
-          printf("local res before:\n");
-          print_matrix(local_res);
-          printf("Adding t[%d] = %f\n",z,t[z]);
-          local_res->vals[tind[z]][f] += t[z];
-          printf("local res after:\n");
-          print_matrix(local_res);
-          printf("\n----------------------\n");
-          
-          }
         }
       }
 
+      //accumulate m(:,f)
+      for(int p=0;p<z;p++) {
+        /*printf("\n----------------------\n");
+        printf("my thread id: %d\n",thread_id);
+        printf("t:");
+        print_array(t,MAX_NNZ_PER_THREAD,'f');
+        printf("local res before:\n");
+        print_matrix(local_res);
+        printf("Adding %f to local_res->vals[tind[%d]][%d] (%f)\n",t[p],p,f,local_res->vals[tind[p]][f] );*/
+        local_res->vals[tind[p]][f] += t[p];
+        
+        /*printf("local res after:\n");
+        print_matrix(local_res);
+        printf("\n----------------------\n");*/
+      }
+		  
       printf("local matrix: \n");
       print_matrix(local_res);
       // Merge local results into the global result
@@ -180,7 +164,7 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
       free(local_res);
     }
   }
-    return res;
+  return res;
 }
 
 /*
@@ -401,4 +385,29 @@ void mttkrp_test(struct hacoo_tensor *t) {
 
   // free m
   free_matrix(m);
+}
+
+//for doubling the size of array
+void resizeIntArray(int** arr, int originalSize) {
+    int newSize = originalSize * 2;
+    int* temp = (int*)realloc(*arr, newSize * sizeof(int));
+
+    if (temp == NULL) {
+        printf("Memory reallocation failed.\n");
+        exit(1);
+    }
+
+    *arr = temp;
+}
+
+void resizeDoubleArray(double** arr, int originalSize) {
+    int newSize = originalSize * 2;
+    double* temp = (double*)realloc(*arr, newSize * sizeof(double));
+
+    if (temp == NULL) {
+        printf("Memory reallocation failed.\n");
+        exit(1);
+    }
+
+    *arr = temp;
 }
