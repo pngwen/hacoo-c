@@ -20,8 +20,8 @@ Returns:
 #include <omp.h>
 #include <stdio.h>
 
-//#define NUM_THREADS 132
-#define NUM_THREADS 2
+#define NUM_THREADS 132
+//#define NUM_THREADS 2
 
 matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
 
@@ -62,9 +62,13 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
       //need a copy of factor matrices?
       matrix_t** local_u = copy_matrices(u, h->ndims);
 
-      unsigned int *idx = (unsigned int *)calloc(h->ndims, sizeof(unsigned int));
-      unsigned int *tind = (unsigned int *)calloc(MAX_NNZ_PER_THREAD, sizeof(unsigned int));
-      double *t = (double *)calloc(MAX_NNZ_PER_THREAD, sizeof(double));
+      unsigned int *idx = (unsigned int *)malloc(h->ndims * sizeof(unsigned int));
+      unsigned int *tind = (unsigned int *)malloc(MAX_NNZ_PER_THREAD * sizeof(unsigned int));
+      double *t = (double *)malloc(MAX_NNZ_PER_THREAD * sizeof(double));
+
+      //unsigned int *idx = (unsigned int *)calloc(h->ndims, sizeof(unsigned int));
+      //unsigned int *tind = (unsigned int *)calloc(MAX_NNZ_PER_THREAD, sizeof(unsigned int));
+      //double *t = (double *)calloc(MAX_NNZ_PER_THREAD, sizeof(double));
       //print_array(t,MAX_NNZ_PER_THREAD,'f');
 
 			matrix_t *local_res = new_matrix(h->dims[n], fmax); // Local result matrix
@@ -93,16 +97,15 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
 
           //check if we've exceeded the # of anticipated nnz per thread.
           //if so, copy current t & tind to new array double the size
-          //NEED TO FIX THIS
           if(z > MAX_NNZ_PER_THREAD) {
-            printf("exceeded nnz per thread, doubling size...\n");
+            //printf("exceeded nnz per thread, doubling size...\n");
             resizeIntArray(&tind, MAX_NNZ_PER_THREAD);
             resizeDoubleArray(&t, MAX_NNZ_PER_THREAD);
             
             //double the size for this thread
             MAX_NNZ_PER_THREAD *=2;
-            print_array(tind,MAX_NNZ_PER_THREAD,'d');
-            print_array(t,MAX_NNZ_PER_THREAD,'f');
+            //print_array(tind,MAX_NNZ_PER_THREAD,'d');
+            //print_array(t,MAX_NNZ_PER_THREAD,'f');
 
           }
 
@@ -149,12 +152,12 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
         printf("\n----------------------\n");*/
       }
 		  
-      printf("local matrix: \n");
-      print_matrix(local_res);
+      //printf("local matrix: \n");
+      //print_matrix(local_res);
+
       // Merge local results into the global result
       #pragma omp critical
       {
-        //res->vals[i][j] += local_res->vals[i][j];
         add_matrix(res, local_res,res);
       }
       // Free thread-local memory
