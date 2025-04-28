@@ -20,8 +20,8 @@ Returns:
 #include <omp.h>
 #include <stdio.h>
 
-#define NUM_THREADS 132
-//#define NUM_THREADS 2
+//#define NUM_THREADS 132
+#define NUM_THREADS 4
 
 matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
 
@@ -48,7 +48,7 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
 
       if (thread_id == 0) { 	
         num_threads = omp_get_num_threads();
-        printf("num threads: %d\n",num_threads);
+        //printf("num threads: %d\n",num_threads);
       }
 
 			int z = 0; // Local counter for advancing through nonzeros

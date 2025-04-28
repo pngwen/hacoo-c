@@ -10,12 +10,12 @@
 #SBATCH --cpus-per-task=132       # match to OMP_NUM_THREADS
 
 # Set OpenMP thread count
-export OMP_NUM_THREADS=132
+export OMP_NUM_THREADS=4
 
 # Run the script multiple times using a loop
 for i in {1..5}; do
     echo "Running iteration $i..."
-    ./run.sh uber 0 # Replace with your actual script
+    ./run.sh chicago 0 # Replace with your actual script
     echo "Iteration $i completed."
 done
 
@@ -24,7 +24,7 @@ echo "All iterations finished!"
 # Run the script multiple times using a loop
 for i in {1..5}; do
     echo "Running iteration $i..."
-    ./run.sh uber 1 # Replace with your actual script
+    ./run.sh chicago 1 # Replace with your actual script
     echo "Iteration $i completed."
 done
 
