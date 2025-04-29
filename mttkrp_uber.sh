@@ -7,10 +7,12 @@
 #SBATCH --time=01:00:00                 # Time limit
 #SBATCH --nodes=1                       # Number of nodes
 #SBATCH --ntasks-per-node=1             # One task (sequential execution)
-#SBATCH --cpus-per-task=132             # Match to OMP_NUM_THREADS
+#SBATCH --cpus-per-task=64              # Match to OMP_NUM_THREADS
+
+cd /u/jcharles1/haccoo-c
 
 # Set OpenMP thread count
-export OMP_NUM_THREADS=4
+export OMP_NUM_THREADS=64
 
 # Number of iterations
 num_iterations=5
