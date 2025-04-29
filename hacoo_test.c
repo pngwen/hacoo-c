@@ -1,3 +1,4 @@
+//#include "CUnit/Basic.h"
 #include "hacoo.h"
 #include "matrix.h"
 #include "mttkrp.h"
@@ -9,162 +10,257 @@
 #include <string.h>
 #include <time.h>
 
-/* Define function pointer type for MTTKRP */
+void verify_mttkrp_mode(int mode);
+
+// One function per mode, assuming max modes = 32 for simplicity
+#define DEFINE_MODE_TEST(N)              \
+    void test_mode_##N(void) {           \
+        verify_mttkrp_mode(N);           \
+    }
+
+DEFINE_MODE_TEST(0)
+DEFINE_MODE_TEST(1)
+DEFINE_MODE_TEST(2)
+DEFINE_MODE_TEST(3)
+// Add more if needed (or use codegen if many)
+
+void read_and_print(int argc, char *argv[]);
+int suite_cleanup(void);
+int suite_init(void);
+
+/* Function pointer type for MTTKRP */
 typedef matrix_t *(*mttkrp_func_t)(struct hacoo_tensor *, matrix_t **, unsigned int);
 
-/* Function prototypes */
-void read_and_print(int argc, char *argv[]);
-void CUnit_mttkrp();
-void verify_mttkrp(int mode);
-void mttkrp_test_function(void);
-matrix_t **get_mttkrp_results(struct hacoo_tensor *t, matrix_t **factor_matrices, 
-    int matrix_count, mttkrp_func_t f, int mode);
-
-// Global data
+/* Command-line arguments */
 char **global_argv;
 int global_argc;
-struct hacoo_tensor *global_tensor = NULL;
-matrix_t **global_factor_matrices = NULL;
-matrix_t **global_mttkrp_answers = NULL;
-int global_matrix_count = 0;
-mttkrp_func_t selected_mttkrp_func;
-int current_mode = 0;
-double *mode_times = NULL; // To track timing per mode
 
+/* Function pointer to MTTKRP function */
+mttkrp_func_t selected_mttkrp_func;
+
+/* Global data loaded once for tests */
+struct hacoo_tensor *global_tensor = NULL;
+matrix_t **global_factors = NULL;
+matrix_t **global_mttkrp_expected = NULL;
+int global_matrix_count = 0;
+
+/* CUnit test to verify if computed answers equal matlab's*/
+void verify_mttkrp();
+void CUnit_verify_mttkrp(); 
+matrix_t **get_mttkrp_results(struct hacoo_tensor *t, matrix_t **factor_matrices, int matrix_count, mttkrp_func_t f);
+
+/*Compare algorithm speeds*/
+void CUnit_mttkrp_algorithm_comp();
+
+
+/* Main function */
 int main(int argc, char *argv[]) {
+    // Force immediate output
+    setvbuf(stdout, NULL, _IONBF, 0); // disable stdout buffering
+    setvbuf(stderr, NULL, _IONBF, 0); // disable stderr buffering
     global_argc = argc;
     global_argv = argv;
+    CUnit_mttkrp_algorithm_comp();
+    return 0;
+}
 
-    CUnit_mttkrp();
+//run MTTKRP algorithm speed comparison
+void CUnit_mttkrp_algorithm_comp() {
+    CU_initialize_registry();
+    CU_pSuite pSuite = CU_add_suite("MTTKRP Modes", 0, 0);
+    suite_init(); //populate tensor, factor matrices, & expected mttkrp answers
+
+    const int alg = atoi(global_argv[4]);
+    if (alg == 0) {
+        selected_mttkrp_func = mttkrp_serial;
+        printf("Running Serial MTTKRP Test\n");
+    } else if (alg == 1) {
+        selected_mttkrp_func = mttkrp;
+        printf("Running Parallel MTTKRP Test\n");
+    } else {
+        printf("Invalid algorithm option. Quitting.\n");
+        CU_cleanup_registry();
+        return;
+    }
+ 
+    double total_time = 0.0;
+
+    for (int i = 0; i < global_tensor->ndims; i++) {
+        clock_t start = clock();
+
+        matrix_t *computed = selected_mttkrp_func(global_tensor, global_factors, i);
+
+        clock_t end = clock();
+        double duration = (double)(end - start) / CLOCKS_PER_SEC;
+        total_time += duration;
+
+        printf("Mode %d MTTKRP Time: %.6f seconds\n", i, duration);
+
+        free_matrix(computed); // prevent memory leaks
+    }
+
+    double avg_time = total_time / global_tensor->ndims;
+    printf("Average MTTKRP Time across %d modes: %.6f seconds\n", global_tensor->ndims, avg_time);
+
+
+    CU_basic_run_tests();
+    suite_cleanup();
+    CU_cleanup_registry();
+}
+
+
+//mttkrp over 1 mode
+void verify_mttkrp_mode(int mode) {
+    CU_ASSERT_PTR_NOT_NULL(global_tensor);
+    CU_ASSERT_PTR_NOT_NULL(global_factors);
+    CU_ASSERT_PTR_NOT_NULL(global_mttkrp_expected);
+    CU_ASSERT(global_matrix_count > 0);
+
+    matrix_t *computed = selected_mttkrp_func(global_tensor, global_factors, mode);
+    matrix_t *expected = global_mttkrp_expected[mode];
+
+    if (are_matrices_equal(expected, computed)) {
+        CU_PASS("MTTKRP mode test passed.");
+    } else {
+        CU_FAIL("MTTKRP mode test failed.");
+        printf("Failure in Mode %d.\n", mode);
+        //printf("HaCOO-C Answer:\n");
+        //print_matrix(computed);
+        //printf("MATLAB Answer:\n");
+        //print_matrix(expected);
+    }
+
+    free_matrix(computed);
+}
+
+/* Verify if computed answers are */
+void CUnit_verify_mttkrp() {
+    CU_initialize_registry();
+    suite_init();
+    CU_pSuite pSuite = CU_add_suite("MTTKRP Test", 0, 0);
+
+    // Set the MTTKRP implementation
+    const int alg = atoi(global_argv[4]);
+    if (alg == 0) {
+        selected_mttkrp_func = mttkrp_serial;
+        printf("Running Serial MTTKRP Test\n");
+    } else if (alg== 1) {
+        selected_mttkrp_func = mttkrp;
+        printf("Running Parallel MTTKRP Test\n");
+    } else {
+        printf("Invalid algorithm option. Quitting.\n");
+        CU_cleanup_registry();
+        return;
+    }
+
+    CU_add_test(pSuite, "MTTKRP", verify_mttkrp);
+    CU_basic_run_tests();
+    suite_cleanup();
+    CU_cleanup_registry();
+}
+
+/* Verify MTTKRP computation with MATLAB answers*/
+void verify_mttkrp() {
+    CU_ASSERT_PTR_NOT_NULL(global_tensor);
+    CU_ASSERT_PTR_NOT_NULL(global_factors);
+    CU_ASSERT_PTR_NOT_NULL(global_mttkrp_expected);
+    CU_ASSERT(global_matrix_count > 0);
+
+    matrix_t **computed = get_mttkrp_results(global_tensor, global_factors, global_matrix_count, selected_mttkrp_func);
+
+    for (int i = 0; i < global_matrix_count; i++) {
+        if (are_matrices_equal(global_mttkrp_expected[i], computed[i])) {
+            CU_PASS("MTTKRP over mode succeeded.");
+        } else {
+            CU_FAIL("MTTKRP over mode failed.");
+            printf("Failure over Mode %d.\n", i + 1);
+            printf("HaCOO-C Answer:\n");
+            print_matrix(computed[i]);
+            printf("MATLAB Answer:\n");
+            print_matrix(global_mttkrp_expected[i]);
+        }
+    }
+
+    free_matrices(computed, global_matrix_count);
+}
+
+/* Compute MTTKRP over all modes */
+matrix_t **get_mttkrp_results(struct hacoo_tensor *t, matrix_t **factor_matrices, int matrix_count, mttkrp_func_t f) {
+    matrix_t **results = (matrix_t **)malloc(sizeof(matrix_t *) * t->ndims);
+    for (int i = 0; i < matrix_count; i++) {
+        results[i] = f(t, factor_matrices, i);
+    }
+    return results;
+}
+
+/* Suite initialization: read all input files */
+int suite_init(void) {
+    const char *tensor_filename = global_argv[1];
+    const char *factor_filename = global_argv[2];
+    const char *mttkrp_filename = global_argv[3];
+
+    // Read tensor
+    FILE *file = fopen(tensor_filename, "r");
+    if (!file) {
+        perror("Error opening tensor file");
+        return 1;
+    }
+    global_tensor = read_tensor_file(file);
+    fclose(file);
+    if (!global_tensor) return 1;
+
+    // Read factor matrices
+    global_matrix_count = read_matrices_from_file(factor_filename, &global_factors);
+    if (global_matrix_count == -1) {
+        fprintf(stderr, "Error reading factor matrices.\n");
+        return 1;
+    }
+
+    // Read expected MTTKRP results
+    int expected_count = read_matrices_from_file(mttkrp_filename, &global_mttkrp_expected);
+    if (expected_count == -1 || expected_count != global_matrix_count) {
+        fprintf(stderr, "Error reading expected MTTKRP results.\n");
+        return 1;
+    }
 
     return 0;
 }
 
-/* Verify MTTKRP algorithm for a single mode and measure execution time */
-void verify_mttkrp(int mode) {
-    CU_ASSERT_PTR_NOT_NULL(global_tensor);
-    CU_ASSERT_PTR_NOT_NULL(global_factor_matrices);
-    CU_ASSERT_PTR_NOT_NULL(global_mttkrp_answers);
-
-    clock_t start = clock();
-
-    matrix_t *hacoo_mttkrp = selected_mttkrp_func(global_tensor, global_factor_matrices, mode);
-
-    clock_t end = clock();
-    double elapsed = (double)(end - start) / CLOCKS_PER_SEC;
-    mode_times[mode] = elapsed;
-
-    if (are_matrices_equal(global_mttkrp_answers[mode], hacoo_mttkrp)) {
-        CU_PASS("MTTKRP over mode succeeded.\n");
-    } else {
-        CU_FAIL("MTTKRP over mode failed");
-        printf("Failure over Mode %d.\n", mode);
-        printf("HaCOO-C Answer:\n");
-        print_matrix(hacoo_mttkrp);
-        printf("MATLAB Answer:\n");
-        print_matrix(global_mttkrp_answers[mode]);
+/* Suite cleanup: free all loaded data */
+int suite_cleanup(void) {
+    if (global_tensor) {
+        hacoo_free(global_tensor);
+        global_tensor = NULL;
     }
+    if (global_factors) {
+        free_matrices(global_factors, global_matrix_count);
+        global_factors = NULL;
+    }
+    if (global_mttkrp_expected) {
+        free_matrices(global_mttkrp_expected, global_matrix_count);
+        global_mttkrp_expected = NULL;
+    }
+    global_matrix_count = 0;
 
-    free_matrix(hacoo_mttkrp);
+    return 0;
 }
 
-/* Test wrapper for CUnit to call verify_mttkrp on current_mode */
-void mttkrp_test_function(void) {
-    verify_mttkrp(current_mode);
-}
-
-/* Compute MTTKRP over all modes */
-matrix_t **get_mttkrp_results(struct hacoo_tensor *t, matrix_t **factor_matrices, int matrix_count, mttkrp_func_t f, int mode) {
-    matrix_t **hacoo_mttkrp = (matrix_t **)malloc(sizeof(matrix_t *) * t->ndims);
-    for (int i = 0; i < matrix_count; i++) {
-        hacoo_mttkrp[i] = f(t, factor_matrices, i);
-    }
-    return hacoo_mttkrp;
-}
-
-/* Setup and run all MTTKRP CUnit tests */
-void CUnit_mttkrp() {
-    CU_initialize_registry();
-    CU_pSuite pSuite = CU_add_suite("MTTKRP Test", 0, 0);
-
-    const int mode = atoi(global_argv[4]);
-
-    if (mode == 0) {
-        selected_mttkrp_func = mttkrp_serial;
-        printf("Running Serial MTTKRP Test\n");
-    } else if (mode == 1) {
-        selected_mttkrp_func = mttkrp;
-        printf("Running Parallel MTTKRP Test\n");
-    } else {
-        printf("Invalid mode. Quitting.\n");
-        return;
-    }
-
-    // Read tensor
-    FILE *file = fopen(global_argv[1], "r");
-    if (!file) {
-        perror("Error opening tensor file");
-        return;
-    }
-    global_tensor = read_tensor_file(file);
-    fclose(file);
-
-    // Read factor matrices
-    global_matrix_count = read_matrices_from_file(global_argv[2], &global_factor_matrices);
-    if (global_matrix_count == -1) {
-        printf("Error reading factor matrices.\n");
-        return;
-    }
-
-    // Read expected MTTKRP results
-    global_matrix_count = read_matrices_from_file(global_argv[3], &global_mttkrp_answers);
-    if (global_matrix_count == -1) {
-        printf("Error reading MTTKRP answers.\n");
-        return;
-    }
-
-    int ndims = global_tensor->ndims;
-    mode_times = (double *)malloc(sizeof(double) * ndims);
-
-    // Add a CUnit test per mode
-    for (int i = 0; i < ndims; i++) {
-        char test_name[50];
-        snprintf(test_name, sizeof(test_name), "MTTKRP Mode %d", i);
-        current_mode = i;
-        CU_add_test(pSuite, test_name, mttkrp_test_function);
-    }
-
-    CU_basic_run_tests();
-
-    // Timing report
-    printf("\n=== Timing Report (seconds) ===\n");
-    double total_time = 0.0;
-    for (int i = 0; i < ndims; ++i) {
-        printf("Mode %d: %.6f s\n", i, mode_times[i]);
-        total_time += mode_times[i];
-    }
-    printf("Average Time: %.6f s\n", total_time / ndims);
-
-    // Cleanup
-    CU_cleanup_registry();
-    free_matrices(global_factor_matrices, global_matrix_count);
-    free_matrices(global_mttkrp_answers, global_matrix_count);
-    hacoo_free(global_tensor);
-    free(mode_times);
-}
-
-/* Just reads and prints a tensor file */
+/* Read tensor and print it */
 void read_and_print(int argc, char *argv[]) {
     FILE *file = fopen(argv[1], "r");
-
+  
     if (!file) {
-        perror("Error opening file");
-        return;
+      perror("Error opening file");
+      return;
     }
-
+  
+    // Read the tensor
     struct hacoo_tensor *t = read_tensor_file(file);
     fclose(file);
-
+  
+    // Print tensor
     print_tensor(t);
+  
+    // Free tensor
     hacoo_free(t);
-}
+  }

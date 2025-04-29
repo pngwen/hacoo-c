@@ -9,10 +9,10 @@
 #SBATCH --ntasks-per-node=1            # One task (sequential execution)
 #SBATCH --cpus-per-task=64             # Match to OMP_NUM_THREADS
 
-cd /u/jcharles1/haccoo-c
+#cd /u/jcharles1/haccoo-c
 
 # Set OpenMP thread count
-export OMP_NUM_THREADS=64
+export OMP_NUM_THREADS=4
 
 # Number of iterations
 num_iterations=5
