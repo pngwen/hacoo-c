@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
 void CUnit_mttkrp_algorithm_comp() {
     CU_initialize_registry();
     CU_pSuite pSuite = CU_add_suite("MTTKRP Modes", 0, 0);
-    suite_init(); //populate tensor, factor matrices, & expected mttkrp answers
+    suite_init();
 
     const int alg = atoi(global_argv[4]);
     if (alg == 0) {
@@ -82,26 +82,28 @@ void CUnit_mttkrp_algorithm_comp() {
         CU_cleanup_registry();
         return;
     }
- 
+
     double total_time = 0.0;
 
     for (int i = 0; i < global_tensor->ndims; i++) {
-        clock_t start = clock();
+        struct timespec start, end;
+        clock_gettime(CLOCK_MONOTONIC, &start);
 
         matrix_t *computed = selected_mttkrp_func(global_tensor, global_factors, i);
 
-        clock_t end = clock();
-        double duration = (double)(end - start) / CLOCKS_PER_SEC;
+        clock_gettime(CLOCK_MONOTONIC, &end);
+
+        double duration = (end.tv_sec - start.tv_sec) + 
+                          (end.tv_nsec - start.tv_nsec) / 1e9;
         total_time += duration;
 
-        printf("Mode %d MTTKRP Time: %.6f seconds\n", i, duration);
+        printf("Mode %d MTTKRP Time: %.9f seconds\n", i, duration);
 
-        free_matrix(computed); // prevent memory leaks
+        free_matrix(computed);
     }
 
     double avg_time = total_time / global_tensor->ndims;
-    printf("Average MTTKRP Time across %d modes: %.6f seconds\n", global_tensor->ndims, avg_time);
-
+    printf("Average MTTKRP Time across %d modes: %.9f seconds\n", global_tensor->ndims, avg_time);
 
     CU_basic_run_tests();
     suite_cleanup();

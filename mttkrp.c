@@ -391,7 +391,7 @@ void mttkrp_test(struct hacoo_tensor *t) {
 }
 
 //for doubling the size of array
-void resizeIntArray(int** arr, int originalSize) {
+void resizeIntArray(unsigned int** arr, int originalSize) {
     int newSize = originalSize * 2;
     int* temp = (int*)realloc(*arr, newSize * sizeof(int));
 
