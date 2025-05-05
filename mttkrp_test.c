@@ -60,6 +60,8 @@ int main(int argc, char *argv[]) {
     setvbuf(stderr, NULL, _IONBF, 0); // disable stderr buffering
     global_argc = argc;
     global_argv = argv;
+    
+    //CUnit_verify_mttkrp();
     CUnit_mttkrp_algorithm_comp();
     return 0;
 }

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# usage: ./run.sh uber 0 to run hacoo_test using serial mttkrp algorithm
+# usage: ./run.sh uber 0 to run mttkrp_test using serial mttkrp algorithm
 # args:
 # 1) name of tensor
 # 2) mttkrp alg: 0 for serial, 1 parallel
@@ -22,12 +22,12 @@ mttkrp_results_file="MTTKRP_test/$folder_name/mttkrp_answers.txt"
 mttkrp_alg="$2" # 0 for serial, 1 for parallel
 
 # Print what will run
-echo "Running hacoo_test with:"
+echo "Running mttkrp_test with:"
 echo "Tensor file:         $data_file"
 echo "Factor matrices:     $factor_matrices_file"
 echo "Expected MTTKRP:     $mttkrp_results_file"
 echo "MTTKRP alg:         $mttkrp_alg (0=serial, 1=parallel)"
 echo ""
 
-# Execute the hacoo_test program
-./hacoo_test "$data_file" "$factor_matrices_file" "$mttkrp_results_file" "$mttkrp_alg"
+# Execute the mttkrp_test program
+./mttkrp_test "$data_file" "$factor_matrices_file" "$mttkrp_results_file" "$mttkrp_alg"

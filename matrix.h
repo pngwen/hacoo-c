@@ -58,6 +58,9 @@ int are_equal(double a, double b);
 /* Add two matrices RES = A + B. C must be allocated to the correct dimensions */
 void add_matrix(matrix_t *res, matrix_t *a, matrix_t *b);
 
+/* Add two matrices RES = A + B over only a specific column. C must be allocated to the correct dimensions */
+void add_matrix_column(matrix_t *res, matrix_t *a, matrix_t *b, int col_idx);
+
 /* Subtract two matrices RES = A - B. C must be allocated to the correct dimensions */
 void sub_matrix(matrix_t *res, matrix_t *a, matrix_t *b);
 

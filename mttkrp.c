@@ -20,9 +20,6 @@ Returns:
 #include <omp.h>
 #include <stdio.h>
 
-//#define NUM_THREADS 132
-#define NUM_THREADS 4
-
 matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
 
   // Number of columns in factor matrices
@@ -32,10 +29,7 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
   matrix_t *res = new_matrix(h->dims[n], fmax);
 
   // Gets the value from OMP_NUM_THREADS
-  //const int NUM_THREADS = omp_get_max_threads();
-  //printf("Max threads: %d\n", NUM_THREADS);
-  
-  omp_set_num_threads(NUM_THREADS);
+  omp_set_num_threads(omp_get_max_threads());
   int num_threads;
 
 	// for every column
@@ -65,11 +59,6 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
       unsigned int *idx = (unsigned int *)malloc(h->ndims * sizeof(unsigned int));
       unsigned int *tind = (unsigned int *)malloc(MAX_NNZ_PER_THREAD * sizeof(unsigned int));
       double *t = (double *)malloc(MAX_NNZ_PER_THREAD * sizeof(double));
-
-      //unsigned int *idx = (unsigned int *)calloc(h->ndims, sizeof(unsigned int));
-      //unsigned int *tind = (unsigned int *)calloc(MAX_NNZ_PER_THREAD, sizeof(unsigned int));
-      //double *t = (double *)calloc(MAX_NNZ_PER_THREAD, sizeof(double));
-      //print_array(t,MAX_NNZ_PER_THREAD,'f');
 
 			matrix_t *local_res = new_matrix(h->dims[n], fmax); // Local result matrix
 
@@ -158,7 +147,7 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
       // Merge local results into the global result
       #pragma omp critical
       {
-        add_matrix(res, local_res,res);
+        add_matrix_column(res, local_res,res,f);
       }
       // Free thread-local memory
       free(idx);

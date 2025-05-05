@@ -310,6 +310,21 @@ void add_matrix(matrix_t *res, matrix_t *a, matrix_t *b) {
   }
 }
 
+//Add values only over a specifix column
+void add_matrix_column(matrix_t *res, matrix_t *a, matrix_t *b, int col_idx) {
+  // Ensure the column index is valid
+  if (col_idx < 0 || col_idx >= a->cols) {
+    printf("Invalid column index\n");
+    return;
+  }
+
+  for (int i = 0; i < a->rows; i++) {
+    // Add only over the specified column
+    res->vals[i][col_idx] = a->vals[i][col_idx] + b->vals[i][col_idx];
+  }
+}
+
+
 void sub_matrix(matrix_t *res, matrix_t *a, matrix_t *b) {
   for (int i = 0; i < a->rows; i++) {
     for (int j = 0; j < a->cols; j++) {
