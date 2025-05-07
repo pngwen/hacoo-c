@@ -21,225 +21,77 @@ Returns:
 #include <stdio.h>
 
 matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
-
-  // Number of columns in factor matrices
-  unsigned int fmax = u[0]->cols;
-
-  // Create the global result array
-  matrix_t *res = new_matrix(h->dims[n], fmax);
-
-  // Gets the value from OMP_NUM_THREADS
-  omp_set_num_threads(omp_get_max_threads());
-  int num_threads;
-
-	// for every column
-	for (int f = 0; f < fmax; f++) {
-
-		// Start OpenMP parallel region
-		#pragma omp parallel
-		{
-      int thread_id = omp_get_thread_num();
-
-      if (thread_id == 0) { 	
-        num_threads = omp_get_num_threads();
-        //printf("num threads: %d\n",num_threads);
-      }
-
-			int z = 0; // Local counter for advancing through nonzeros
-
-      //anticipated maximum # of nnz per thread. 
-      //if this is exceeded, copy over to array double the size
-      //size_t MAX_NNZ_PER_THREAD = 8;
-      size_t MAX_NNZ_PER_THREAD = h->nbuckets/h->nnz;
-
-			// Allocate thread-local variables
-      //need a copy of factor matrices?
-      matrix_t** local_u = copy_matrices(u, h->ndims);
-
-      unsigned int *idx = (unsigned int *)malloc(h->ndims * sizeof(unsigned int));
-      unsigned int *tind = (unsigned int *)malloc(MAX_NNZ_PER_THREAD * sizeof(unsigned int));
-      double *t = (double *)malloc(MAX_NNZ_PER_THREAD * sizeof(double));
-
-			matrix_t *local_res = new_matrix(h->dims[n], fmax); // Local result matrix
-
-			if (!idx || !tind || !t || !local_res) {
-        fprintf(stderr, "Error: Memory allocation failed.\n");
-        free(idx);
-        free(tind);
-        free(t);
-        free(local_res);
-      }
-
-			// Divide work among threads by columns
-      for (int i = thread_id; i < h->nbuckets; i += num_threads) {
-        //printf("My thread id: %d\n",thread_id);
-        //printf("f: %d\n", f);
-
-        if (!h->buckets[i]) {
-          continue; // Skip empty buckets
-        }
-
-        struct hacoo_bucket *cur;
-        for (cur = h->buckets[i]; cur; cur = cur->next) {
-          hacoo_extract_index(cur, h->ndims, idx);
-          //printf("extracted index: [%d %d %d]\n", idx[0],idx[1],idx[2]);
-
-          //check if we've exceeded the # of anticipated nnz per thread.
-          //if so, copy current t & tind to new array double the size
-          if(z > MAX_NNZ_PER_THREAD) {
-            //printf("exceeded nnz per thread, doubling size...\n");
-            resizeIntArray(&tind, MAX_NNZ_PER_THREAD);
-            resizeDoubleArray(&t, MAX_NNZ_PER_THREAD);
-            
-            //double the size for this thread
-            MAX_NNZ_PER_THREAD *=2;
-            //print_array(tind,MAX_NNZ_PER_THREAD,'d');
-            //print_array(t,MAX_NNZ_PER_THREAD,'f');
-
-          }
-
-          //printf("z: %d\n",z);
-          //printf("curr value: %f\n",cur->value);
-          t[z] = cur->value;
-          //printf("After setting t[%d] = %f\n", z,t[z]);
-          //print_array(t,MAX_NNZ_PER_THREAD,'f');
-
-          tind[z] = idx[n];
-          /*printf("idx[%d] = %d\n",n,idx[n]);
-          printf("after setting tind[%d] = %d\n", z,tind[z]);
-          print_array(tind,MAX_NNZ_PER_THREAD,'d');*/
-
-          for (int b = 0; b < h->ndims; b++) {
-            if (b == n) continue; // Skip the unfolded mode
-            //does each thread need a copy of u?
-            //printf("factor matrix %d\n",b);
-            //print_matrix(local_u[b]);
-            //printf("before multiplying value by factor matrix:\n");
-            //print_array(t,MAX_NNZ_PER_THREAD,'f');
-            t[z] *= local_u[b]->vals[idx[b]][f];
-            //printf("t[%d] *= local_u[%d]->vals[idx[%d]][%d] = %f *= %f\n",z,b,b,f,t[z],local_u[b]->vals[idx[b]][f]);
-            //printf("after multiplying value by factor matrix:\n");
-            //print_array(t,MAX_NNZ_PER_THREAD,'f');
-          }
-          z++; //advance to the next nnz
-        }
-      }
-
-      //accumulate m(:,f)
-      for(int p=0;p<z;p++) {
-        /*printf("\n----------------------\n");
-        printf("my thread id: %d\n",thread_id);
-        printf("t:");
-        print_array(t,MAX_NNZ_PER_THREAD,'f');
-        printf("local res before:\n");
-        print_matrix(local_res);
-        printf("Adding %f to local_res->vals[tind[%d]][%d] (%f)\n",t[p],p,f,local_res->vals[tind[p]][f] );*/
-        local_res->vals[tind[p]][f] += t[p];
-        
-        /*printf("local res after:\n");
-        print_matrix(local_res);
-        printf("\n----------------------\n");*/
-      }
-		  
-      //printf("local matrix: \n");
-      //print_matrix(local_res);
-
-      // Merge local results into the global result
-      #pragma omp critical
-      {
-        add_matrix_column(res, local_res,res,f);
-      }
-      // Free thread-local memory
-      free(idx);
-      free(tind);
-      free(t);
-      free(local_res);
-    }
-  }
-  return res;
-}
-
-/*
-matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
-
-    // Number of columns in factor matrices
     unsigned int fmax = u[0]->cols;
 
-    // Create the global result array
+    // Create the final output matrix (global result)
     matrix_t *res = new_matrix(h->dims[n], fmax);
 
-    // Gets the value from OMP_NUM_THREADS
-    //const int NUM_THREADS = omp_get_max_threads();
-    //printf("Max threads: %d\n", NUM_THREADS);
-    
-    omp_set_num_threads(NUM_THREADS);
+    // Get the maximum number of threads available
+    int num_threads = omp_get_max_threads();
 
-    // Start OpenMP parallel region
+    // Allocate an array of per-thread result matrices (no shared writes!)
+    matrix_t **partials = malloc(num_threads * sizeof(matrix_t*));
+
+    // Start the parallel region
     #pragma omp parallel
     {
-        int num_threads = omp_get_num_threads();
-        int thread_id = omp_get_thread_num();
+        int tid = omp_get_thread_num();           // Thread ID
+        int nthreads = omp_get_num_threads();     // Total threads
 
-        // Allocate thread-local variables
-        unsigned int *idx = (unsigned int *)malloc(sizeof(unsigned int) * h->ndims);
-        unsigned int *tind = (unsigned int *)malloc(sizeof(unsigned int) * h->nnz);
-        double *t = (double *)malloc(sizeof(double) * h->nnz);
-        matrix_t *local_res = new_matrix(h->dims[n], fmax); // Local result matrix
+        // Partition the hash buckets among threads: [start, end)
+        int chunk = (h->nbuckets + nthreads - 1) / nthreads;
+        int start = tid * chunk;
+        int end = (start + chunk > h->nbuckets) ? h->nbuckets : start + chunk;
 
-        if (!idx || !tind || !t || !local_res) {
-            fprintf(stderr, "Error: Memory allocation failed.\n");
-            free(idx);
-            free(tind);
-            free(t);
-            free(local_res);
-        }
+        // Allocate a thread-local result matrix
+        matrix_t *local_res = new_matrix(h->dims[n], fmax);
+        partials[tid] = local_res;
 
-        // Divide work among threads by columns
-        for (int f = thread_id; f < fmax; f += num_threads) {
-            int z = 0; // Counter for nonzeros
+        // Temporary buffer for tensor indices
+        unsigned int *idx = malloc(h->ndims * sizeof(unsigned int));
 
-            for (int m = 0; m < h->nbuckets; m++) {
-                if (!h->buckets[m]) {
-                    continue; // Skip empty buckets
-                }
+        // Loop over the thread's assigned buckets
+        for (int i = start; i < end; i++) {
+            if (!h->buckets[i]) continue;
 
-                struct hacoo_bucket *cur;
-                for (cur = h->buckets[m]; cur; cur = cur->next) {
-                    hacoo_extract_index(cur, h->ndims, idx);
+            // Traverse the linked list of nonzeros in this bucket
+            for (struct hacoo_bucket *cur = h->buckets[i]; cur; cur = cur->next) {
+                hacoo_extract_index(cur, h->ndims, idx);  // Extract indices of this nnz
 
-                    t[z] = cur->value;
-                    tind[z] = idx[n];
-
-                    for (int b = 0; b < h->ndims; b++) {
-                        if (b == n) continue; // Skip the unfolded mode
-                        t[z] *= u[b]->vals[idx[b]][f];
+                // Compute MTTKRP contribution for each column f
+                for (int f = 0; f < fmax; f++) {
+                    double prod = cur->value;  // Start with tensor value
+                    for (int d = 0; d < h->ndims; d++) {
+                        if (d == n) continue;  // Skip the mode we're unfolding along
+                        prod *= u[d]->vals[idx[d]][f];  // Multiply by corresponding factor matrix entry
                     }
-
-                    local_res->vals[tind[z]][f] += t[z];
-                    z++;
+                    // Accumulate contribution into thread-local result matrix
+                    local_res->vals[idx[n]][f] += prod;
                 }
             }
         }
 
-        // Merge local results into the global result
-        #pragma omp critical
-        {
-            for (int i = 0; i < res->rows; i++) {
-                for (int j = 0; j < res->cols; j++) {
-                    res->vals[i][j] += local_res->vals[i][j];
-                }
-            }
-        }
-
-        // Free thread-local memory
+        // Clean up thread-local index buffer
         free(idx);
-        free(tind);
-        free(t);
-        free(local_res);
     }
 
+    // Merge per-thread results into the global result matrix
+    // This is done in serial, but can be parallelized if needed
+    for (int t = 0; t < num_threads; t++) {
+        for (int i = 0; i < h->dims[n]; i++) {
+            for (int f = 0; f < fmax; f++) {
+                res->vals[i][f] += partials[t]->vals[i][f];
+            }
+        }
+        // Free thread-local result matrix after merge
+        free_matrix(partials[t]);
+    }
+
+    // Free the array of pointers to partial matrices
+    free(partials);
+
     return res;
-}*/
+}
 
 matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
 
