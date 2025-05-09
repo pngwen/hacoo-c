@@ -20,80 +20,86 @@ Returns:
 #include <omp.h>
 #include <stdio.h>
 
-matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
-    unsigned int fmax = u[0]->cols;
+matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
+{
+  unsigned int fmax = u[0]->cols;
 
-    // Create the final output matrix (global result)
-    matrix_t *res = new_matrix(h->dims[n], fmax);
+  // Create the final output matrix (global result)
+  matrix_t *res = new_matrix(h->dims[n], fmax);
 
-    // Get the maximum number of threads available
-    int num_threads = omp_get_max_threads();
+  // Get the maximum number of threads available
+  int num_threads = omp_get_max_threads();
 
-    // Allocate an array of per-thread result matrices (no shared writes!)
-    matrix_t **partials = malloc(num_threads * sizeof(matrix_t*));
+  // Allocate an array of per-thread result matrices (no shared writes!)
+  matrix_t **partials = malloc(num_threads * sizeof(matrix_t *));
 
-    // Start the parallel region
-    #pragma omp parallel
+// Start the parallel region
+#pragma omp parallel
+  {
+    int tid = omp_get_thread_num();       // Thread ID
+    int nthreads = omp_get_num_threads(); // Total threads
+
+    // Partition the hash buckets among threads: [start, end)
+    int chunk = (h->nbuckets + nthreads - 1) / nthreads;
+    int start = tid * chunk;
+    int end = (start + chunk > h->nbuckets) ? h->nbuckets : start + chunk;
+
+    // Allocate a thread-local result matrix
+    matrix_t *local_res = new_matrix(h->dims[n], fmax);
+    partials[tid] = local_res;
+
+    // Temporary buffer for tensor indices
+    unsigned int *idx = malloc(h->ndims * sizeof(unsigned int));
+
+    // Loop over the thread's assigned buckets
+    for (int i = start; i < end; i++)
     {
-        int tid = omp_get_thread_num();           // Thread ID
-        int nthreads = omp_get_num_threads();     // Total threads
+      if (!h->buckets[i])
+        continue;
 
-        // Partition the hash buckets among threads: [start, end)
-        int chunk = (h->nbuckets + nthreads - 1) / nthreads;
-        int start = tid * chunk;
-        int end = (start + chunk > h->nbuckets) ? h->nbuckets : start + chunk;
+      // Traverse the linked list of nonzeros in this bucket
+      for (struct hacoo_bucket *cur = h->buckets[i]; cur; cur = cur->next)
+      {
+        hacoo_extract_index(cur, h->ndims, idx); // Extract indices of this nnz
 
-        // Allocate a thread-local result matrix
-        matrix_t *local_res = new_matrix(h->dims[n], fmax);
-        partials[tid] = local_res;
-
-        // Temporary buffer for tensor indices
-        unsigned int *idx = malloc(h->ndims * sizeof(unsigned int));
-
-        // Loop over the thread's assigned buckets
-        for (int i = start; i < end; i++) {
-            if (!h->buckets[i]) continue;
-
-            // Traverse the linked list of nonzeros in this bucket
-            for (struct hacoo_bucket *cur = h->buckets[i]; cur; cur = cur->next) {
-                hacoo_extract_index(cur, h->ndims, idx);  // Extract indices of this nnz
-
-                // Compute MTTKRP contribution for each column f
-                for (int f = 0; f < fmax; f++) {
-                    double prod = cur->value;  // Start with tensor value
-                    for (int d = 0; d < h->ndims; d++) {
-                        if (d == n) continue;  // Skip the mode we're unfolding along
-                        prod *= u[d]->vals[idx[d]][f];  // Multiply by corresponding factor matrix entry
-                    }
-                    // Accumulate contribution into thread-local result matrix
-                    local_res->vals[idx[n]][f] += prod;
-                }
-            }
+        // Compute MTTKRP contribution for each column f
+        for (int f = 0; f < fmax; f++)
+        {
+          double prod = cur->value; // Start with tensor value
+          for (int d = 0; d < h->ndims; d++)
+          {
+            if (d == n)
+              continue;                    // Skip the mode we're unfolding along
+            prod *= u[d]->vals[idx[d]][f]; // Multiply by corresponding factor matrix entry
+          }
+          // Accumulate contribution into thread-local result matrix
+          local_res->vals[idx[n]][f] += prod;
         }
-
-        // Clean up thread-local index buffer
-        free(idx);
+      }
     }
 
-    // Merge per-thread results into the global result matrix
-    // This is done in serial, but can be parallelized if needed
-    for (int t = 0; t < num_threads; t++) {
-        for (int i = 0; i < h->dims[n]; i++) {
-            for (int f = 0; f < fmax; f++) {
-                res->vals[i][f] += partials[t]->vals[i][f];
-            }
-        }
-        // Free thread-local result matrix after merge
-        free_matrix(partials[t]);
-    }
+    // Clean up thread-local index buffer
+    free(idx);
+  }
 
-    // Free the array of pointers to partial matrices
-    free(partials);
+  // Merge per-thread results into the global result matrix
+  #pragma omp parallel for collapse(2)
+  for (int i = 0; i < h->dims[n]; i++) {
+      for (int f = 0; f < fmax; f++) {
+          for (int t = 0; t < num_threads; t++) {
+              res->vals[i][f] += partials[t]->vals[i][f];
+          }
+      }
+  }
 
-    return res;
+  // Free the array of pointers to partial matrices
+  free(partials);
+
+  return res;
 }
 
-matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
+matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
+{
 
   // number of columns
   unsigned int fmax = u[0]->cols;
@@ -110,8 +116,9 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
   // to hold nnz values
   double *t = (double *)malloc(sizeof(double) * h->nnz);
 
-  //if (idx == NULL || tind == NULL || t == NULL) {
-  if (tind == NULL || t == NULL) {
+  // if (idx == NULL || tind == NULL || t == NULL) {
+  if (tind == NULL || t == NULL)
+  {
     fprintf(stderr, "Error: Memory allocation failed.\n");
     return NULL;
   }
@@ -119,47 +126,59 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
   struct hacoo_bucket *cur, *next;
 
   // go through each column
-  for (int f = 0; f < fmax; f++) {
+  for (int f = 0; f < fmax; f++)
+  {
 
     int z = 0; // counter for which nnz we're on
 
-    for (int m = 0; m < h->nbuckets; m++) { // go through every bucket
+    for (int m = 0; m < h->nbuckets; m++)
+    { // go through every bucket
 
       // if blank bucket, skip
-      if (h->buckets[m] == NULL) {
+      if (h->buckets[m] == NULL)
+      {
         continue;
       }
 
       // go through each element in that bucket
-      for (cur = h->buckets[m]; cur; cur = cur->next) {
+      for (cur = h->buckets[m]; cur; cur = cur->next)
+      {
         // decode element in the bucket
         hacoo_extract_index(cur, h->ndims, idx);
 
-        if (cur == NULL) {
+        if (cur == NULL)
+        {
           fprintf(stderr, "Error: cur is NULL.\n");
           return NULL;
         }
 
-        if (z >= h->nnz) {
+        if (z >= h->nnz)
+        {
           fprintf(stderr,
                   "Error: z exceeds the number of non-zero elements.\n");
           return NULL;
         }
 
         t[z] = cur->value;
-         if(t[z]==0) {printf("set t[%d] to 0.\n",z);}
+        if (t[z] == 0)
+        {
+          printf("set t[%d] to 0.\n", z);
+        }
         tind[z] = idx[n];
 
         int b = 0;
-        
-        while (b < fmax) {
+
+        while (b < fmax)
+        {
           // skip the unfolded mode
-          if (b == n) {
+          if (b == n)
+          {
             b++;
             continue;
           }
 
-          if (idx[b] >= u[b]->rows) {
+          if (idx[b] >= u[b]->rows)
+          {
             fprintf(stderr,
                     "Error: idx[%d] out of bounds for u[%d] with rows %d.\n", b,
                     b, u[b]->rows);
@@ -175,8 +194,10 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
     }
 
     // accumulate m(:,f)
-    for (int z = 0; z < h->nnz; z++) {
-      if (tind[z] >= res->rows) {
+    for (int z = 0; z < h->nnz; z++)
+    {
+      if (tind[z] >= res->rows)
+      {
         fprintf(stderr, "Error: tind[z] (%d) out of bounds for res with rows %d\n", tind[z], res->rows);
         return NULL;
       }
@@ -193,9 +214,9 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n) {
   return res;
 }
 
-
 // function to test mttkrp
-void mttkrp_test(struct hacoo_tensor *t) {
+void mttkrp_test(struct hacoo_tensor *t)
+{
 
   // Create factor matrices
   double a[] = {1, 3, 5, 2, 4, 6};
@@ -215,14 +236,16 @@ void mttkrp_test(struct hacoo_tensor *t) {
 
   matrix_t *m;
 
-  for (int i = 0; i < num_matrices; i++) {
+  for (int i = 0; i < num_matrices; i++)
+  {
     m = mttkrp(t, u, i);
     printf("\nMode-%d MTTKRP: \n", i);
     print_matrix(m);
   }
 
   // free factor matrices
-  for (int i = 0; i < num_matrices; i++) {
+  for (int i = 0; i < num_matrices; i++)
+  {
     free_matrix(u[i]);
   }
   free(u);
@@ -231,27 +254,31 @@ void mttkrp_test(struct hacoo_tensor *t) {
   free_matrix(m);
 }
 
-//for doubling the size of array
-void resizeIntArray(unsigned int** arr, int originalSize) {
-    int newSize = originalSize * 2;
-    int* temp = (int*)realloc(*arr, newSize * sizeof(int));
+// for doubling the size of array
+void resizeIntArray(unsigned int **arr, int originalSize)
+{
+  int newSize = originalSize * 2;
+  int *temp = (int *)realloc(*arr, newSize * sizeof(int));
 
-    if (temp == NULL) {
-        printf("Memory reallocation failed.\n");
-        exit(1);
-    }
+  if (temp == NULL)
+  {
+    printf("Memory reallocation failed.\n");
+    exit(1);
+  }
 
-    *arr = temp;
+  *arr = temp;
 }
 
-void resizeDoubleArray(double** arr, int originalSize) {
-    int newSize = originalSize * 2;
-    double* temp = (double*)realloc(*arr, newSize * sizeof(double));
+void resizeDoubleArray(double **arr, int originalSize)
+{
+  int newSize = originalSize * 2;
+  double *temp = (double *)realloc(*arr, newSize * sizeof(double));
 
-    if (temp == NULL) {
-        printf("Memory reallocation failed.\n");
-        exit(1);
-    }
+  if (temp == NULL)
+  {
+    printf("Memory reallocation failed.\n");
+    exit(1);
+  }
 
-    *arr = temp;
+  *arr = temp;
 }
