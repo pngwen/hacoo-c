@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=uber_mttkrp_scaling
+#SBATCH --job-name=lbnl_mttkrp_scaling
 #SBATCH --partition=cpu
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
@@ -11,7 +11,7 @@
 
 cd /u/jcharles1/haccoo-c
 
-tensor="uber"
+tensor="lbnl"
 tensor_file="MTTKRP_test/${tensor}/${tensor}_processed.txt"
 factor_file="MTTKRP_test/${tensor}/factor_matrices.txt"
 expected_file="MTTKRP_test/${tensor}/mttkrp_answers.txt"

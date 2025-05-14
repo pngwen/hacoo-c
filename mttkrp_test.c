@@ -40,9 +40,6 @@ matrix_t **get_mttkrp_results(struct hacoo_tensor *t, matrix_t **factor_matrices
 /*Compare algorithm speeds*/
 void CUnit_mttkrp_algorithm_comp();
 
-//without CUnit
-void mttkrp_algorithm_comp();
-
 /* Main function */
 int main(int argc, char *argv[]) {
     // Force immediate output
@@ -52,9 +49,8 @@ int main(int argc, char *argv[]) {
     global_argv = argv;
     
     //CUnit_verify_mttkrp();
-    //CUnit_mttkrp_algorithm_comp();
-    
-    mttkrp_algorithm_comp();
+    CUnit_mttkrp_algorithm_comp();
+
     return 0;
 }
 
@@ -102,46 +98,6 @@ void CUnit_mttkrp_algorithm_comp() {
     CU_basic_run_tests();
     suite_cleanup();
     CU_cleanup_registry();
-}
-
-//run MTTKRP algorithm speed comparison (no CUnit)
-void mttkrp_algorithm_comp() {
-    suite_init();
-
-    const int alg = atoi(global_argv[4]);
-    if (alg == 0) {
-        selected_mttkrp_func = mttkrp_serial;
-        printf("Running Serial MTTKRP Test\n");
-    } else if (alg == 1) {
-        selected_mttkrp_func = mttkrp;
-        printf("Running Parallel MTTKRP Test\n");
-    } else {
-        printf("Invalid algorithm option. Quitting.\n");
-        return;
-    }
-
-    double total_time = 0.0;
-
-    for (int i = 0; i < global_tensor->ndims; i++) {
-        struct timespec start, end;
-        clock_gettime(CLOCK_MONOTONIC, &start);
-
-        matrix_t *computed = selected_mttkrp_func(global_tensor, global_factors, i);
-
-        clock_gettime(CLOCK_MONOTONIC, &end);
-
-        double duration = (end.tv_sec - start.tv_sec) + 
-                          (end.tv_nsec - start.tv_nsec) / 1e9;
-        total_time += duration;
-
-        printf("Mode %d MTTKRP Time: %.9f seconds\n", i, duration);
-
-        free_matrix(computed);
-    }
-
-    double avg_time = total_time / global_tensor->ndims;
-    printf("Average MTTKRP Time across %d modes: %.9f seconds\n", global_tensor->ndims, avg_time);
-    suite_cleanup();
 }
 
 //check this library's mttkrp with matlab's answer over 1 mode

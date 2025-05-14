@@ -41,35 +41,13 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
         int num_threads_outer = num_threads;
         int nthreads = omp_get_num_threads();
 
-        printf("Thread %d: Entering parallel region\n", tid);
-        printf("Thread %d: num_threads_outer = %d, nthreads = %d\n", tid, num_threads_outer, nthreads);
-
-        if(num_threads_outer != nthreads) {
-
-            printf("Thread %d: num_threads doesn't equal nthreads, setting nthreads = num_threads\n", tid);
-            nthreads = num_threads_outer;
-        };
-
-        printf("Thread %d: nthreads (after potential assignment) = %d\n", tid, nthreads);
-
         partials[tid] = new_matrix(h->dims[n], fmax);
-
-        printf("Thread %d: partials[%d] allocated\n", tid, tid);
 
         matrix_t *local_res = partials[tid];
 
         int chunk = (h->nbuckets + nthreads - 1) / nthreads;
         int start = tid * chunk;
         int end = (start + chunk > h->nbuckets) ? h->nbuckets : start + chunk;
-
-        printf("Thread %d: start = %d, end = %d\n", tid, start, end);
-        fflush(stdout);
-
-        if (local_res == NULL|| local_res->vals == NULL) {
-            fprintf(stderr, "Error: Thread %d failed to allocate local_res (rows=%u, cols=%u)!\n",
-                    tid, h->dims[n], fmax);
-            exit(1);
-        }
 
         // Temporary buffer for tensor indices
         unsigned int *idx = malloc(h->ndims * sizeof(unsigned int));
@@ -82,17 +60,6 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
             // Traverse linked list of nonzeros in the bucket
             for (struct hacoo_bucket *cur = h->buckets[i]; cur; cur = cur->next) {
                 hacoo_extract_index(cur, h->ndims, idx); // Extract indices
-                printf("Thread %d, Bucket %d, Morton: %zu, Extracted Index: [", tid, i, cur->morton);
-
-                for (unsigned int d = 0; d < h->ndims; d++) {
-                    printf("%u", idx[d]);
-                    if (d < h->ndims - 1) {
-                        printf(", ");
-                    }
-                }
-
-                printf("]\n");
-                fflush(stdout);
 
                 // Compute MTTKRP contribution
                 for (int f = 0; f < fmax; f++) {
@@ -110,13 +77,6 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
 
         // Free per-thread temporary buffer
         free(idx);
-    }
-
-    for (int t = 0; t < num_threads; t++) {
-        if (partials[t] == NULL) {
-            fprintf(stderr, "Error: partials[%d] is NULL after parallel region!\n", t);
-            exit(1);
-        }
     }
 
     // Merge per-thread results into the global result matrix
