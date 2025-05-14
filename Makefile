@@ -13,7 +13,7 @@ main: $(SRCS) $(HEADERS)
 main-debug: $(SRCS) $(HEADERS)
 	$(CC) $(CFLAGS) -O0 $(SRCS) -o "$@" $(LDLIBS)
 
-hacoo_test: hacoo.o hacoo_test.o matrix.o mttkrp.o
+mttkrp_test: hacoo.o mttkrp_test.o matrix.o mttkrp.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 candecomp: candecomp.o hacoo.o matrix.o cpd.o mttkrp.o
@@ -23,4 +23,4 @@ matrix_op_test: matrix_op_test.o matrix.o
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
 clean:
-	rm -f main main-debug hacoo_test *.o
+	rm -f main main-debug mttkrp_test *.o
