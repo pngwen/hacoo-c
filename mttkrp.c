@@ -22,80 +22,122 @@ Returns:
 
 matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
 {
-  unsigned int fmax = u[0]->cols;
+	omp_set_num_threads(2); // Set the number of threads explicitly
+    unsigned int fmax = u[0]->cols;
 
-  // Create the final output matrix (global result)
-  matrix_t *res = new_matrix(h->dims[n], fmax);
+    // Allocate the final output matrix (global result)
+    matrix_t *res = new_matrix(h->dims[n], fmax);
 
-  // Get the maximum number of threads available
-  int num_threads = omp_get_max_threads();
+    // Get the maximum number of threads available
+    int num_threads = omp_get_max_threads();
 
-  // Allocate an array of per-thread result matrices (no shared writes!)
-  matrix_t **partials = malloc(num_threads * sizeof(matrix_t *));
+    // Allocate an array to hold per-thread result matrix pointers
+    matrix_t **partials = malloc(num_threads * sizeof(matrix_t *));
 
-// Start the parallel region
-#pragma omp parallel
-  {
-    int tid = omp_get_thread_num();       // Thread ID
-    int nthreads = omp_get_num_threads(); // Total threads
-
-    // Partition the hash buckets among threads: [start, end)
-    int chunk = (h->nbuckets + nthreads - 1) / nthreads;
-    int start = tid * chunk;
-    int end = (start + chunk > h->nbuckets) ? h->nbuckets : start + chunk;
-
-    // Allocate a thread-local result matrix
-    matrix_t *local_res = new_matrix(h->dims[n], fmax);
-    partials[tid] = local_res;
-
-    // Temporary buffer for tensor indices
-    unsigned int *idx = malloc(h->ndims * sizeof(unsigned int));
-
-    // Loop over the thread's assigned buckets
-    for (int i = start; i < end; i++)
+    // Parallel region: each thread processes a chunk of hash buckets
+    #pragma omp parallel
     {
-      if (!h->buckets[i])
-        continue;
+        int tid = omp_get_thread_num();       // Thread ID
+        int num_threads_outer = num_threads;
+        int nthreads = omp_get_num_threads();
 
-      // Traverse the linked list of nonzeros in this bucket
-      for (struct hacoo_bucket *cur = h->buckets[i]; cur; cur = cur->next)
-      {
-        hacoo_extract_index(cur, h->ndims, idx); // Extract indices of this nnz
+        printf("Thread %d: Entering parallel region\n", tid);
+        printf("Thread %d: num_threads_outer = %d, nthreads = %d\n", tid, num_threads_outer, nthreads);
 
-        // Compute MTTKRP contribution for each column f
-        for (int f = 0; f < fmax; f++)
-        {
-          double prod = cur->value; // Start with tensor value
-          for (int d = 0; d < h->ndims; d++)
-          {
-            if (d == n)
-              continue;                    // Skip the mode we're unfolding along
-            prod *= u[d]->vals[idx[d]][f]; // Multiply by corresponding factor matrix entry
-          }
-          // Accumulate contribution into thread-local result matrix
-          local_res->vals[idx[n]][f] += prod;
+        if(num_threads_outer != nthreads) {
+
+            printf("Thread %d: num_threads doesn't equal nthreads, setting nthreads = num_threads\n", tid);
+            nthreads = num_threads_outer;
+        };
+
+        printf("Thread %d: nthreads (after potential assignment) = %d\n", tid, nthreads);
+
+        partials[tid] = new_matrix(h->dims[n], fmax);
+
+        printf("Thread %d: partials[%d] allocated\n", tid, tid);
+
+        matrix_t *local_res = partials[tid];
+
+        int chunk = (h->nbuckets + nthreads - 1) / nthreads;
+        int start = tid * chunk;
+        int end = (start + chunk > h->nbuckets) ? h->nbuckets : start + chunk;
+
+        printf("Thread %d: start = %d, end = %d\n", tid, start, end);
+        fflush(stdout);
+
+        if (local_res == NULL|| local_res->vals == NULL) {
+            fprintf(stderr, "Error: Thread %d failed to allocate local_res (rows=%u, cols=%u)!\n",
+                    tid, h->dims[n], fmax);
+            exit(1);
         }
-      }
+
+        // Temporary buffer for tensor indices
+        unsigned int *idx = malloc(h->ndims * sizeof(unsigned int));
+
+        // Loop over the assigned buckets
+        for (int i = start; i < end; i++) {
+            if (!h->buckets[i])
+                continue;
+
+            // Traverse linked list of nonzeros in the bucket
+            for (struct hacoo_bucket *cur = h->buckets[i]; cur; cur = cur->next) {
+                hacoo_extract_index(cur, h->ndims, idx); // Extract indices
+                printf("Thread %d, Bucket %d, Morton: %zu, Extracted Index: [", tid, i, cur->morton);
+
+                for (unsigned int d = 0; d < h->ndims; d++) {
+                    printf("%u", idx[d]);
+                    if (d < h->ndims - 1) {
+                        printf(", ");
+                    }
+                }
+
+                printf("]\n");
+                fflush(stdout);
+
+                // Compute MTTKRP contribution
+                for (int f = 0; f < fmax; f++) {
+                    double prod = cur->value;
+                    for (int d = 0; d < h->ndims; d++) {
+                        if (d == n)
+                            continue; // Skip the mode we're unfolding along
+                        prod *= u[d]->vals[idx[d]][f];
+                    }
+                    // Accumulate into local result matrix
+                    local_res->vals[idx[n]][f] += prod;
+                }
+            }
+        }
+
+        // Free per-thread temporary buffer
+        free(idx);
     }
 
-    // Clean up thread-local index buffer
-    free(idx);
-  }
+    for (int t = 0; t < num_threads; t++) {
+        if (partials[t] == NULL) {
+            fprintf(stderr, "Error: partials[%d] is NULL after parallel region!\n", t);
+            exit(1);
+        }
+    }
 
-  // Merge per-thread results into the global result matrix
-  #pragma omp parallel for collapse(2)
-  for (int i = 0; i < h->dims[n]; i++) {
-      for (int f = 0; f < fmax; f++) {
-          for (int t = 0; t < num_threads; t++) {
-              res->vals[i][f] += partials[t]->vals[i][f];
-          }
-      }
-  }
+    // Merge per-thread results into the global result matrix
+    #pragma omp parallel for collapse(2)
+    for (int i = 0; i < h->dims[n]; i++) {
+        for (int f = 0; f < fmax; f++) {
+            for (int t = 0; t < num_threads; t++) {
+                res->vals[i][f] += partials[t]->vals[i][f];
+            }
+        }
+    }
 
-  // Free the array of pointers to partial matrices
-  free(partials);
+    // Free each of the thread-local result matrices
+    for (int t = 0; t < num_threads; t++) {
+        free_matrix(partials[t]);
+    }
 
-  return res;
+    // Free the array of matrix pointers
+    free(partials);
+
+    return res;
 }
 
 matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n)

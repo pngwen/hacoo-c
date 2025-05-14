@@ -4,6 +4,7 @@
         "utility": "c",
         "stdio.h": "c",
         "basic.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "cmath": "c"
     }
 }

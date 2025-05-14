@@ -23,6 +23,7 @@
             "logging": {
                 "engineLogging": true
             },
+            
             "internalConsoleOptions": "openOnSessionStart"
         },
         {
@@ -50,14 +51,17 @@
             "internalConsoleOptions": "openOnSessionStart"
         },
         {
-            "name": "Build and Debug hacoo_test (gdb)",
+            "name": "Build and Debug mttkrp_test (gdb)",
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/run.sh",
-            "args": ["${input:hacoo_inputFile}",
-                     "${input:mode}"
-                    ],
+            "program": "${workspaceFolder}/mttkrp_test",
+            "args": [
+                "${workspaceFolder}/MTTKRP_test/${input:tensor_name}/${input:tensor_name}_processed.txt",
+                "${workspaceFolder}/MTTKRP_test/${input:tensor_name}/factor_matrices.txt",
+                "${workspaceFolder}/MTTKRP_test/${input:tensor_name}/mttkrp_answers.txt",
+                "${input:mttkrp_alg}"
+            ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
@@ -71,16 +75,22 @@
     ],
     "inputs": [
         {
-            "id": "hacoo_inputFile",
+            "id": "inputFile",
             "type": "promptString",
-            "description": "Enter the name of tensor",
+            "description": "Enter the input file for candecomp",
+            "default": "MTTKRP_test/uber/uber_processed.txt"
+        },
+        {
+            "id": "tensor_name",
+            "type": "promptString",
+            "description": "Enter the name of the tensor directory (e.g., 'uber')",
             "default": "uber"
         },
         {
-            "id": "mode",
+            "id": "mttkrp_alg",
             "type": "promptString",
-            "description": "Serial (0) or parallel (1) mode",
-            "default": "0"
+            "description": "Serial (0) or parallel (1) algorithm",
+            "default": "1"
         }
     ]
 }

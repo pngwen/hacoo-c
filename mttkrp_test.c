@@ -10,23 +10,7 @@
 #include <string.h>
 #include <time.h>
 
-void verify_mttkrp_mode(int mode);
-
-// One function per mode, assuming max modes = 32 for simplicity
-#define DEFINE_MODE_TEST(N)              \
-    void test_mode_##N(void) {           \
-        verify_mttkrp_mode(N);           \
-    }
-
-DEFINE_MODE_TEST(0)
-DEFINE_MODE_TEST(1)
-DEFINE_MODE_TEST(2)
-DEFINE_MODE_TEST(3)
-// Add more if needed (or use codegen if many)
-
 void read_and_print(int argc, char *argv[]);
-int suite_cleanup(void);
-int suite_init(void);
 
 /* Function pointer type for MTTKRP */
 typedef matrix_t *(*mttkrp_func_t)(struct hacoo_tensor *, matrix_t **, unsigned int);
@@ -44,6 +28,10 @@ matrix_t **global_factors = NULL;
 matrix_t **global_mttkrp_expected = NULL;
 int global_matrix_count = 0;
 
+/*CUnit initialization & cleanup*/
+int suite_cleanup(void);
+int suite_init(void);
+
 /* CUnit test to verify if computed answers equal matlab's*/
 void verify_mttkrp();
 void CUnit_verify_mttkrp(); 
@@ -52,6 +40,8 @@ matrix_t **get_mttkrp_results(struct hacoo_tensor *t, matrix_t **factor_matrices
 /*Compare algorithm speeds*/
 void CUnit_mttkrp_algorithm_comp();
 
+//without CUnit
+void mttkrp_algorithm_comp();
 
 /* Main function */
 int main(int argc, char *argv[]) {
@@ -62,7 +52,9 @@ int main(int argc, char *argv[]) {
     global_argv = argv;
     
     //CUnit_verify_mttkrp();
-    CUnit_mttkrp_algorithm_comp();
+    //CUnit_mttkrp_algorithm_comp();
+    
+    mttkrp_algorithm_comp();
     return 0;
 }
 
@@ -112,8 +104,47 @@ void CUnit_mttkrp_algorithm_comp() {
     CU_cleanup_registry();
 }
 
+//run MTTKRP algorithm speed comparison (no CUnit)
+void mttkrp_algorithm_comp() {
+    suite_init();
 
-//mttkrp over 1 mode
+    const int alg = atoi(global_argv[4]);
+    if (alg == 0) {
+        selected_mttkrp_func = mttkrp_serial;
+        printf("Running Serial MTTKRP Test\n");
+    } else if (alg == 1) {
+        selected_mttkrp_func = mttkrp;
+        printf("Running Parallel MTTKRP Test\n");
+    } else {
+        printf("Invalid algorithm option. Quitting.\n");
+        return;
+    }
+
+    double total_time = 0.0;
+
+    for (int i = 0; i < global_tensor->ndims; i++) {
+        struct timespec start, end;
+        clock_gettime(CLOCK_MONOTONIC, &start);
+
+        matrix_t *computed = selected_mttkrp_func(global_tensor, global_factors, i);
+
+        clock_gettime(CLOCK_MONOTONIC, &end);
+
+        double duration = (end.tv_sec - start.tv_sec) + 
+                          (end.tv_nsec - start.tv_nsec) / 1e9;
+        total_time += duration;
+
+        printf("Mode %d MTTKRP Time: %.9f seconds\n", i, duration);
+
+        free_matrix(computed);
+    }
+
+    double avg_time = total_time / global_tensor->ndims;
+    printf("Average MTTKRP Time across %d modes: %.9f seconds\n", global_tensor->ndims, avg_time);
+    suite_cleanup();
+}
+
+//check this library's mttkrp with matlab's answer over 1 mode
 void verify_mttkrp_mode(int mode) {
     CU_ASSERT_PTR_NOT_NULL(global_tensor);
     CU_ASSERT_PTR_NOT_NULL(global_factors);
@@ -137,7 +168,7 @@ void verify_mttkrp_mode(int mode) {
     free_matrix(computed);
 }
 
-/* Verify if computed answers are */
+/* Verify if computed answers are equal to matlab's */
 void CUnit_verify_mttkrp() {
     CU_initialize_registry();
     suite_init();
