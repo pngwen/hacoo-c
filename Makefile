@@ -1,7 +1,7 @@
 all: main
 
 CC = gcc
-override CFLAGS += -g -Wno-everything -pthread -I../cunit-local/include -I.
+override CFLAGS += -g -fopenmp -pthread -Wno-everything -I../cunit-local/include -I.
 LDLIBS=-lm -fopenmp ../cunit-local/lib/libcunit.a
 
 SRCS = $(shell find . -name '.ccls-cache' -type d -prune -o -type f -name '*.c' -print)
