@@ -65,4 +65,4 @@ dkms.conf
 
 #ignore large tensor files
 MTTKRP_test/enron/*
-MTTKRP_test/nell/*
+MTTKRP_test/nell_2/*

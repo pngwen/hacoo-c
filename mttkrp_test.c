@@ -194,7 +194,7 @@ int suite_init(void) {
     FILE *file = fopen(tensor_filename, "r");
     if (!file) {
         perror("Error opening tensor file");
-        return 1;
+        exit(1);
     }
     global_tensor = read_tensor_file(file);
     fclose(file);
@@ -204,7 +204,7 @@ int suite_init(void) {
     global_matrix_count = read_matrices_from_file(factor_filename, &global_factors);
     if (global_matrix_count == -1) {
         fprintf(stderr, "Error reading factor matrices.\n");
-        return 1;
+        exit(1);
     }
 
     // Read expected MTTKRP results

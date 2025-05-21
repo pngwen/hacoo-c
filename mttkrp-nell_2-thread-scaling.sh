@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=mttkrp-uber-thread-scaling
+#SBATCH --job-name=mttkrp-nell_2-thread-scaling
 #SBATCH --partition=cpu
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
@@ -9,9 +9,9 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=128
 
-#cd /u/jcharles1/haccoo-c
+cd /u/jcharles1/haccoo-c
 
-tensor="uber"
+tensor="nell_2"
 tensor_file="MTTKRP_test/${tensor}/${tensor}_processed.txt"
 factor_file="MTTKRP_test/${tensor}/factor_matrices.txt"
 expected_file="MTTKRP_test/${tensor}/mttkrp_answers.txt"

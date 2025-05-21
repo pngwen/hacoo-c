@@ -214,11 +214,10 @@ int read_matrices_from_file(const char *filename, matrix_t ***matrices) {
     // Read the matrix data
     for (int i = 0; i < rows; i++) {
       for (int j = 0; j < cols; j++) {
-        if (fscanf(file, "%lf", &new_matrix_array[matrix_count]->vals[i][j]) !=
-            1) {
-          perror("Error reading matrix data");
+        if (fscanf(file, "%lf", &new_matrix_array[matrix_count]->vals[i][j]) != 1) {
+          fprintf(stderr, "Error reading matrix data at row %d, col %d (matrix %d)\n", i, j, matrix_count);
           fclose(file);
-          free(new_matrix_array); // Free memory on error
+          free(new_matrix_array);
           return -1;
         }
       }
