@@ -92,4 +92,6 @@ void locate_zeroes(double *arr, int size);
 
 void print_matrix_column(matrix_t *matrix, int col_index);
 
+double matrix_frobenius_norm(matrix_t *m);
+
 #endif

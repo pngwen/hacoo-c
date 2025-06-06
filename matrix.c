@@ -376,75 +376,60 @@ void scale_matrix(matrix_t *m, double scalar)
 
 void invert_matrix(matrix_t *res, matrix_t *a)
 {
-    // Check if the matrix is square
     if (a->rows != a->cols)
-    {
-        //TODO: better error handling
         return;
-    }
 
-    // Create a temporary matrix to store the augmented matrix
-    matrix_t *augmented = new_matrix(a->rows, 2 * a->cols);
+    int n = a->rows;
+    matrix_t *augmented = new_matrix(n, 2 * n);
 
-    // Copy the original matrix into the left half of the augmented matrix
-    for (int i = 0; i < a->rows; i++)
-    {
-        for (int j = 0; j < a->cols; j++)
-        {
+    // Copy a into left half, identity into right half
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++)
             augmented->vals[i][j] = a->vals[i][j];
-        }
+        for (int j = n; j < 2 * n; j++)
+            augmented->vals[i][j] = (i == j - n) ? 1.0 : 0.0;
     }
 
-    // Fill the right half of the augmented matrix with the identity matrix
-    for (int i = 0; i < a->rows; i++)
-    {
-        for (int j = a->cols; j < 2 * a->cols; j++)
-        {
-            augmented->vals[i][j] = (i == j - a->cols) ? 1 : 0;
+    // Gaussian elimination with partial pivoting
+    for (int i = 0; i < n; i++) {
+        // Find pivot row
+        int max_row = i;
+        double max_val = fabs(augmented->vals[i][i]);
+        for (int k = i + 1; k < n; k++) {
+            if (fabs(augmented->vals[k][i]) > max_val) {
+                max_val = fabs(augmented->vals[k][i]);
+                max_row = k;
+            }
         }
-    }
-
-    // Perform row operations to transform the left half of the augmented matrix into the identity matrix
-    for (int i = 0; i < a->rows; i++)
-    {
-        double pivot = augmented->vals[i][i];
-        if (pivot == 0)
-        {
-            // TODO: better error handling
+        if (max_val < 1e-12) { // Singular matrix
             free_matrix(augmented);
             return;
         }
-
-        // Divide the row by the pivot to make the diagonal element 1
-        for (int j = 0; j < 2 * a->cols; j++)
-        {
+        // Swap rows if needed
+        if (max_row != i) {
+            double *tmp = augmented->vals[i];
+            augmented->vals[i] = augmented->vals[max_row];
+            augmented->vals[max_row] = tmp;
+        }
+        // Normalize pivot row
+        double pivot = augmented->vals[i][i];
+        for (int j = 0; j < 2 * n; j++)
             augmented->vals[i][j] /= pivot;
-        }
-
-        // Subtract multiples of the row from the other rows to make the rest of the column zero
-        for (int k = 0; k < a->rows; k++)
-        {
-            if (k == i)
-            {
-                continue;
-            }
-
+        // Eliminate other rows
+        for (int k = 0; k < n; k++) {
+            if (k == i) continue;
             double factor = augmented->vals[k][i];
-            for (int j = 0; j < 2 * a->cols; j++)
-            {
+            for (int j = 0; j < 2 * n; j++)
                 augmented->vals[k][j] -= factor * augmented->vals[i][j];
-            }
         }
     }
 
-    // Copy the right half of the augmented matrix into the result matrix
-    for (int i = 0; i < a->rows; i++)
-    {
-        for (int j = 0; j < a->cols; j++)
-        {
-            res->vals[i][j] = augmented->vals[i][j + a->cols];
-        }
-    }
+    // Copy right half to result
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < n; j++)
+            res->vals[i][j] = augmented->vals[i][j + n];
+
+    free_matrix(augmented);
 }
 
 /* Print 1-D Array */
@@ -520,4 +505,13 @@ void fill_matrix(matrix_t *m, double val)
             m->vals[i][j] = val;
         }
     }
+}
+
+
+double matrix_frobenius_norm(matrix_t *m) {
+    double sum = 0.0;
+    for (int i = 0; i < m->rows; i++)
+        for (int j = 0; j < m->cols; j++)
+            sum += m->vals[i][j] * m->vals[i][j];
+    return sqrt(sum);
 }
