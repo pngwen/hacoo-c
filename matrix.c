@@ -23,9 +23,13 @@ matrix_t *new_matrix(unsigned int n_rows, unsigned int n_cols) {
 /* Generate a random matrix of a given size and value range */
 matrix_t* new_random_matrix(size_t rows, size_t cols, double min_value, double max_value) {
     matrix_t *random_matrix = new_matrix(rows, cols);
+    static int seeded = 0;
 
     // Seed the random number generator
-    srand((unsigned int)time(NULL));
+    if(!seeded) {
+        seeded=1;
+        srand((unsigned int)time(NULL));
+    }
 
     // Fill the matrix with random values in the specified range [min_value, max_value]
     for (size_t i = 0; i < rows; i++) {
@@ -60,6 +64,21 @@ matrix_t* copy_matrix(matrix_t *original) {
     }
 
     return copy;
+}
+
+void copy_matrix_to(matrix_t *dest, matrix_t *src) {
+    // Ensure the dest has the same dimensions as the src
+    if (src->rows != dest->rows || src->cols != dest->cols) {
+        fprintf(stderr, "Error: Dimensions of src and dest do not match.\n");
+        return;
+    }
+
+    // Copy the data from the src matrix to the dest
+    for (size_t i = 0; i < src->rows; i++) {
+        for (size_t j = 0; j < src->cols; j++) {
+            dest->vals[i][j] = src->vals[i][j];
+        }
+    }
 }
 
 /* Copy multiple matrices to newly allocated matrices */
@@ -334,30 +353,44 @@ void sub_matrix(matrix_t *res, matrix_t *a, matrix_t *b) {
 
 void mul_matrix(matrix_t *res, matrix_t *a, matrix_t *b)
 {
+    matrix_t *tmp = new_matrix(a->rows, b->cols);
+
     for (int i = 0; i < a->rows; i++)
     {
         for (int j = 0; j < b->cols; j++)
         {
+            tmp->vals[i][j] = 0.0;
             for (int k = 0; k < a->cols; k++)
             {
-                res->vals[i][j] += a->vals[i][k] * b->vals[k][j];
+                tmp->vals[i][j] += a->vals[i][k] * b->vals[k][j];
             }
         }
     }
+
+    // Copy the result to res
+    copy_matrix_to(res, tmp);
+    free_matrix(tmp);
 }
 
 void mul_transpose_matrix(matrix_t *res, matrix_t *a, matrix_t *b)
 {
+    matrix_t *tmp = new_matrix(a->rows, b->cols);
+
     for (int i = 0; i < a->cols; i++)
     {
         for (int j = 0; j < b->cols; j++)
         {
+            tmp->vals[i][j] = 0.0;
             for (int k = 0; k < a->rows; k++)
             {
-                res->vals[i][j] += a->vals[k][i] * b->vals[k][j];
+                tmp->vals[i][j] += a->vals[k][i] * b->vals[k][j];
             }
         }
     }
+
+    // Copy the result to res
+    copy_matrix_to(res, tmp);
+    free_matrix(tmp);
 }
 
 

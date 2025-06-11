@@ -29,6 +29,9 @@ matrix_t *array_to_matrix(double *data, unsigned int n_rows, unsigned int n_cols
 /* Copy contents of one matrix to a newly allocated matrix */
 matrix_t *copy_matrix(matrix_t *m);
 
+/* Copy matrix in place. */
+void copy_matrix_to(matrix_t *dest, matrix_t *src);
+
 /* Copy multiple matrices to newly allocated matrices */
 matrix_t** copy_matrices(matrix_t **originals, size_t num_matrices);
 
