@@ -65,7 +65,6 @@ int main(int argc, char *argv[])
     {
         printf("Factor matrix %u:\n", i);
         print_matrix(result->factors[i]);
-        free_matrix(result->factors[i]);
     }
 
     cpd_result_free(result);
