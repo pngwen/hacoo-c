@@ -14,6 +14,7 @@ matrix([[1, 2],
 typedef struct matrix {
   unsigned int rows;
   unsigned int cols;
+  double *data; // pointer to the actual data elements
   double **vals;
 } matrix_t;
 
@@ -41,7 +42,7 @@ void print_matrix(matrix_t *m);
 void print_matrices(matrix_t **matrices, int num_matrices);
 
 /* free matrix */
-matrix_t *free_matrix(matrix_t *m);
+void free_matrix(matrix_t *m);
 
 /* Read matrix from text file */
 matrix_t *matrix_read_init();

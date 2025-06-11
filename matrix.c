@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <time.h> // for time
 #include <math.h>  // For fabs()
+#include <string.h>
 
 //Define acceptable margin of error
 #define EPSILON 1.0e-2
@@ -13,9 +14,11 @@ matrix_t *new_matrix(unsigned int n_rows, unsigned int n_cols) {
   matrix->rows = n_rows;
   matrix->cols = n_cols;
   double **vals = (double **)malloc(sizeof(double *) * n_rows);
-  for (int x = 0; x < n_rows; x++) {
-    vals[x] = (double *)calloc(n_cols, sizeof(double));
+  vals[0] = (double *)calloc(n_rows * n_cols, sizeof(double)); // Allocate memory for the first row
+  for (int x = 1; x < n_rows; x++) {
+    vals[x] = vals[x - 1] + n_cols; // Point subsequent rows to the same memory block
   }
+  matrix->data = vals[0];
   matrix->vals = vals;
   return matrix;
 }
@@ -55,13 +58,7 @@ matrix_t *array_to_matrix(double *data, unsigned int n_rows, unsigned int n_cols
 matrix_t* copy_matrix(matrix_t *original) {
     // Create a new matrix with the same dimensions
     matrix_t *copy = new_matrix(original->rows, original->cols);
-
-    // Copy the data from the original matrix to the new one
-    for (size_t i = 0; i < original->rows; i++) {
-        for (size_t j = 0; j < original->cols; j++) {
-            copy->vals[i][j] = original->vals[i][j];
-        }
-    }
+    memcpy(copy->data, original->data, original->rows * original->cols * sizeof(double));
 
     return copy;
 }
@@ -73,12 +70,7 @@ void copy_matrix_to(matrix_t *dest, matrix_t *src) {
         return;
     }
 
-    // Copy the data from the src matrix to the dest
-    for (size_t i = 0; i < src->rows; i++) {
-        for (size_t j = 0; j < src->cols; j++) {
-            dest->vals[i][j] = src->vals[i][j];
-        }
-    }
+    memcpy(dest->data, src->data, src->rows * src->cols * sizeof(double));
 }
 
 /* Copy multiple matrices to newly allocated matrices */
@@ -154,11 +146,11 @@ void print_matrices(matrix_t **matrices, int num_matrices) {
 }
 
 /* Free a single matrix */
-matrix_t *free_matrix(matrix_t *m) {
-  for (int x = 0; x < m->rows; x++) {
-    free(m->vals[x]);
-  }
-  free(m->vals);
+void free_matrix(matrix_t *m) {
+    if (!m) { return; }
+    if(m->data) free(m->data);
+    if(m->vals) free(m->vals);
+    free(m);
 }
 
 // Function to read matrices from a file into an array of matrix_t pointers
@@ -198,7 +190,7 @@ int read_matrices_from_file(const char *filename, matrix_t ***matrices) {
     }
 
     // Allocate memory for the new matrix
-    new_matrix_array[matrix_count] = (matrix_t *)malloc(sizeof(matrix_t));
+    new_matrix_array[matrix_count] = new_matrix(rows, cols);
     if (!new_matrix_array[matrix_count]) {
       perror("Memory allocation failed");
       fclose(file);
@@ -206,29 +198,6 @@ int read_matrices_from_file(const char *filename, matrix_t ***matrices) {
       return -1;
     }
 
-    // Set the matrix dimensions
-    new_matrix_array[matrix_count]->rows = rows;
-    new_matrix_array[matrix_count]->cols = cols;
-    new_matrix_array[matrix_count]->vals =
-        (double **)malloc(rows * sizeof(double *));
-    if (!new_matrix_array[matrix_count]->vals) {
-      perror("Memory allocation failed");
-      fclose(file);
-      free(new_matrix_array); // Free memory on error
-      return -1;
-    }
-
-    // Allocate memory for each row in the matrix
-    for (int i = 0; i < rows; i++) {
-      new_matrix_array[matrix_count]->vals[i] =
-          (double *)malloc(cols * sizeof(double));
-      if (!new_matrix_array[matrix_count]->vals[i]) {
-        perror("Memory allocation failed");
-        fclose(file);
-        free(new_matrix_array); // Free memory on error
-        return -1;
-      }
-    }
 
     // Read the matrix data
     for (int i = 0; i < rows; i++) {
@@ -255,11 +224,7 @@ int read_matrices_from_file(const char *filename, matrix_t ***matrices) {
 // Free an array of matrices
 void free_matrices(matrix_t **matrices, int matrix_count) {
   for (int i = 0; i < matrix_count; i++) {
-    for (int j = 0; j < matrices[i]->rows; j++) {
-      free(matrices[i]->vals[j]);
-    }
-    free(matrices[i]->vals);
-    free(matrices[i]);
+      free_matrix(matrices[i]); // Free each matrix
   }
   free(matrices);
 }
@@ -435,8 +400,7 @@ void invert_matrix(matrix_t *res, matrix_t *a)
             }
         }
         if (max_val < 1e-12) { // Singular matrix
-            free_matrix(augmented);
-            return;
+            goto done;
         }
         // Swap rows if needed
         if (max_row != i) {
@@ -462,6 +426,7 @@ void invert_matrix(matrix_t *res, matrix_t *a)
         for (int j = 0; j < n; j++)
             res->vals[i][j] = augmented->vals[i][j + n];
 
+done:
     free_matrix(augmented);
 }
 
