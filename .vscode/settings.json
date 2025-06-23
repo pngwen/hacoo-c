@@ -5,6 +5,7 @@
         "stdio.h": "c",
         "basic.h": "c",
         "string.h": "c",
-        "cmath": "c"
+        "cmath": "c",
+        "initializer_list": "c"
     }
 }

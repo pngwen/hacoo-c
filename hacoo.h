@@ -6,17 +6,19 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include "vector.h"
 
 struct hacoo_bucket {
   unsigned long long morton;
   double value;
-  struct hacoo_bucket *next;
 };
+
+DEFINE_VECTOR_TYPE(struct hacoo_bucket, bucket_vector)
 
 struct hacoo_tensor {
   size_t ndims;
   unsigned int *dims;
-  struct hacoo_bucket **buckets;
+  bucket_vector *buckets; //vector of hacoo_buckets
   size_t nbuckets;
   unsigned int load;
   unsigned int nnz;
@@ -67,10 +69,9 @@ void print_status(struct hacoo_tensor *t);
 void print_tensor(struct hacoo_tensor *t);
 
 /* Print the contents of a specific bucket in the tensor */
-void print_bucket(struct hacoo_tensor *t, int bucket_index);
-void print_bucket_from_ptr(struct hacoo_bucket *b, unsigned int ndims);
-
-void print_nth_nonzero(struct hacoo_tensor *t, int n);
+//void print_bucket(struct hacoo_tensor *t, int bucket_index);
+//void print_bucket_from_ptr(struct hacoo_bucket *b, unsigned int ndims);
+//void print_nth_nonzero(struct hacoo_tensor *t, int n);
 
 /* Calculate the frobenius norm of the tensor */
 double frobenius_norm(struct hacoo_tensor *t);
