@@ -67,6 +67,13 @@ int main(int argc, char *argv[])
         print_matrix(result->factors[i]);
     }
 
+    // Print the lambdas
+    printf("Lambdas:\n");
+    for (unsigned int i = 0; i < result->rank; i++)
+    {
+        printf("%f ", result->lambda[i]);
+    }
+
     cpd_result_free(result);
     hacoo_free(tensor);
 
