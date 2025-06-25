@@ -73,6 +73,7 @@ int main(int argc, char *argv[])
     {
         printf("%f ", result->lambda[i]);
     }
+    printf("\n");
 
     cpd_result_free(result);
     hacoo_free(tensor);
