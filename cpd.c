@@ -25,8 +25,14 @@ static void gram_product(matrix_t *res, matrix_t **factor, unsigned int modes, u
 {
     matrix_t *g = new_matrix(factor[0]->cols, factor[0]->cols);
 
-    // start with the identity matrix
-    fill_identity_matrix(res);
+    // start with  matrix of ones
+    for (unsigned int i = 0; i < res->rows; i++)
+    {
+        for (unsigned int j = 0; j < res->cols; j++)
+        {
+            res->vals[i][j] = 1.0;
+        }
+    }
 
     for(int n=0; n<modes; n++)
     {
