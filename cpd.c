@@ -75,40 +75,11 @@ static cpd_result_t *cpd_alloc(struct hacoo_tensor *t, unsigned int rank)
     }
 
     // Initialize the random arrays
-    /*
     for (unsigned int i = 0; i < t->ndims; i++)
     {
         result->factors[i] = new_random_matrix(t->dims[i], rank, 0, 1);
         if (!result->factors[i]) { goto bad; }
-    }*/
-
-    /* Populate the factor matrices with the following values for
-     * testing:
-     * result->factors[0] = 0.691945        0.018378
-     *                      0.283824        0.419653
-     *
-     * result->factors[1] = 0.939179        0.509681
-     *                      0.548621        0.280958
-     *
-     * result->factors[2] = 0.552988        0.507097
-     *                      0.813003        0.293792
-     */
-    result->factors[0] = new_matrix(2, rank);
-    result->factors[0]->vals[0][0] = 0.691945; 
-    result->factors[0]->vals[0][1] = 0.018378;
-    result->factors[0]->vals[1][0] = 0.283824;
-    result->factors[0]->vals[1][1] = 0.419653;
-    result->factors[1] = new_matrix(2, rank);
-    result->factors[1]->vals[0][0] = 0.939179;
-    result->factors[1]->vals[0][1] = 0.509681;
-    result->factors[1]->vals[1][0] = 0.548621;
-    result->factors[1]->vals[1][1] = 0.280958;
-    result->factors[2] = new_matrix(2, rank);
-    result->factors[2]->vals[0][0] = 0.552988;
-    result->factors[2]->vals[0][1] = 0.507097;
-    result->factors[2]->vals[1][0] = 0.813003;
-    result->factors[2]->vals[1][1] = 0.293792;
-
+    }
 
     return result;
 
