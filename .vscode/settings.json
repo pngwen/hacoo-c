@@ -6,6 +6,7 @@
         "basic.h": "c",
         "string.h": "c",
         "cmath": "c",
-        "initializer_list": "c"
+        "initializer_list": "c",
+        "time.h": "c"
     }
 }

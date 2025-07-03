@@ -20,87 +20,7 @@ Returns:
 #include <omp.h>
 #include <stdio.h>
 
-/* Parallel mttkrp() with Precomputed Products */
-matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
-{
-    unsigned int fmax = u[0]->cols;
-
-    matrix_t *res = new_matrix(h->dims[n], fmax);
-    int num_threads = omp_get_max_threads();
-    matrix_t **partials = malloc(num_threads * sizeof(matrix_t *));
-
-    #pragma omp parallel
-    {
-        int tid = omp_get_thread_num();
-        int nthreads = omp_get_num_threads();
-
-        if (tid == 0) {
-            printf("Number of threads: %d\n", nthreads);
-        }
-
-        partials[tid] = new_matrix(h->dims[n], fmax);
-        matrix_t *local_res = partials[tid];
-
-        int chunk = (h->nbuckets + nthreads - 1) / nthreads;
-        int start = tid * chunk;
-        int end = (start + chunk > h->nbuckets) ? h->nbuckets : start + chunk;
-
-        unsigned int *idx = malloc(h->ndims * sizeof(unsigned int));
-
-        // Process each assigned bucket vector
-        for (int i = start; i < end; i++) {
-            bucket_vector *vec = &h->buckets[i];
-
-            if (vec->size == 0) continue;
-
-            for (size_t j = 0; j < vec->size; j++) {
-                struct hacoo_bucket *cur = &vec->data[j];
-                hacoo_extract_index(cur, h->ndims, idx);
-
-                // Precompute the product of all fixed u[d][idx[d]][f] for each f
-                double *precomputed = malloc(fmax * sizeof(double));
-                for (int f = 0; f < fmax; f++) {
-                    double prod = cur->value;
-                    for (int d = 0; d < h->ndims; d++) {
-                        if (d == n) continue;
-                        prod *= u[d]->vals[idx[d]][f];
-                    }
-                    precomputed[f] = prod;
-                }
-
-                // Accumulate into the result for mode-n index
-                for (int f = 0; f < fmax; f++) {
-                    local_res->vals[idx[n]][f] += precomputed[f];
-                }
-
-                free(precomputed);
-            }
-        }
-
-        free(idx);
-    }
-
-    // Merge thread-local matrices
-    #pragma omp parallel for collapse(2)
-    for (int i = 0; i < h->dims[n]; i++) {
-        for (int f = 0; f < fmax; f++) {
-            for (int t = 0; t < num_threads; t++) {
-                res->vals[i][f] += partials[t]->vals[i][f];
-            }
-        }
-    }
-
-    for (int t = 0; t < num_threads; t++) {
-        free_matrix(partials[t]);
-    }
-
-    free(partials);
-
-    return res;
-}
-
 /* Parallel MTTKRP */
-/*
 matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
 {
     unsigned int fmax = u[0]->cols;
@@ -176,7 +96,6 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
 
     return res;
 }
-*/
 
 matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
 {

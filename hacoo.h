@@ -5,6 +5,7 @@
 #define HACOO_H
 #include <stddef.h>
 #include <stdint.h>
+#include <stdint.h>
 #include <stdio.h>
 #include "vector.h"
 
@@ -56,11 +57,17 @@ void read_entry(struct hacoo_tensor *t);
 /* Read a tensor from a tns file */
 struct hacoo_tensor *read_tensor_file(FILE *file);
 
+/* Delete this later */
+struct hacoo_tensor *read_tensor_file_with_base(FILE *file, int zero_base);
+
 /* Initialize a tensor from a file */
 struct hacoo_tensor *file_init(FILE *file);
 
 /* Read an entry from a file */
 void file_entry(struct hacoo_tensor *t, FILE *file);
+
+/* Delete this later*/
+void file_entry_with_base(struct hacoo_tensor *t, FILE *file, int zero_base);
 
 /* Print out information about the tensor */
 void print_status(struct hacoo_tensor *t);

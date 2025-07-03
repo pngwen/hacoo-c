@@ -109,53 +109,6 @@ void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value)
   }
 }
 
-/*
-void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value)
-{
-  //fprintf(stderr, "In hacoo set: recieved index: %u %u %u %u\n",index[0], index[1],index[2],index[3]);
-  unsigned long long morton = hacoo_morton(t->ndims, index);
-  size_t i = hacoo_bucket_index(t, morton);
-  struct hacoo_bucket *b;
-
-  // see if it already exists in the bucket
-  b = hacoo_bucket_search(t->buckets[i], morton);
-
-  // If bucket is unoccupied, create new bucket
-  if (!b)
-  {
-    b = hacoo_new_bucket(); // Create a new bucket
-    if (t->buckets[i] == NULL)
-    {
-      // If the bucket at index i is empty, place the new bucket there
-      t->buckets[i] = b;
-    }
-    else
-    {
-      // If there is already a bucket chain, append to the end of the chain
-      struct hacoo_bucket *last = t->buckets[i];
-      while (last->next)
-      {
-        last = last->next;
-      }
-      last->next = b; // Append the new bucket to the end of the chain
-    }
-    b->morton = morton; // Set Morton code on the new bucket
-    t->nnz++;           // Increment the number of non-zero elements
-  }
-
-  b->value = value; // Set the value for the bucket
-
-  // Check if the load limit has been exceeded
-  if (t->nbuckets > 0 && ((double)t->nnz / (double)t->nbuckets) > ((double)t->load / 100.0)) {
-    hacoo_rehash(&t);
-    if (t == NULL) {  // Ensure rehash was successful
-      fprintf(stderr, "Rehash failed, exiting.\n");
-      return;
-    }
-}
-
-}*/
-
 void hacoo_rehash(struct hacoo_tensor **t)
 {
   // Step 1: Allocate new tensor with 2x buckets
@@ -208,95 +161,6 @@ void hacoo_rehash(struct hacoo_tensor **t)
   hacoo_free(dummy);
   free(index);
 }
-
-/*
-void hacoo_rehash(struct hacoo_tensor **t)
-{
-  //Allocate dummy tensor with new parameters
-  // Step 1: Allocate a new tensor with twice the number of buckets
-  struct hacoo_tensor *dummy = hacoo_alloc((*t)->ndims, (*t)->dims, (*t)->nbuckets * 2, (*t)->load);
-  hacoo_compute_params(dummy);
-
-  if (dummy== NULL) {
-      fprintf(stderr, "Failed to allocate dummy tensor during rehash.\n");
-      return;
-  }
-
-    // Allocate a new bucket array with double the number of buckets
-    struct hacoo_bucket **new_buckets = (struct hacoo_bucket **)calloc((*t)->nbuckets * 2, sizeof(struct hacoo_bucket *));
-    if (!new_buckets) {
-        fprintf(stderr, "Error: Failed to allocate new buckets during rehash.\n");
-        return;
-    }
-
-    unsigned int *index = (unsigned int *)malloc(sizeof(unsigned int) * (*t)->ndims);
-    if (!index)
-    {
-        fprintf(stderr, "Error: Failed to allocate memory for index array during rehash.\n");
-        free(new_buckets);
-        return;
-    }
-
-    struct hacoo_bucket *cur;
-    struct hacoo_bucket *b;
-    int nnz=0; //ensure new nnz count is == current nnz
-
-    // Loop over all buckets in the current tensor
-    for (size_t i = 0; i < (*t)->nbuckets; i++) {
-      //printf("i: %d\n",i);
-      cur = (*t)->buckets[i];
-      while (cur) {
-        //make new bucket
-        b = hacoo_new_bucket(); // Create a new bucket
-        b->morton = cur->morton;
-        b->value = cur->value;
-
-        // Compute the new bucket index
-        size_t j = hacoo_bucket_index(dummy, cur->morton);
-
-        if (new_buckets[j] == NULL) {
-          // If the bucket at index j is empty, place the new bucket there
-          new_buckets[j] = b;
-        }else {
-          // If there is already a bucket chain, append to the end of the chain
-          struct hacoo_bucket *last = new_buckets[j];
-          while (last->next)
-          {
-            last = last->next;
-          }
-          last->next = b; // Append the new bucket to the end of the chain
-        }
-        nnz++;           // Increment the number of non-zero elements
-        //printf("inserted nnz %d\n",nnz);
-        cur = cur->next;
-      }
-    }
-
-  //ensure everything copied correctly
-  if((*t)->nnz != nnz) {
-    printf("Something went wrong. Only %d nnz copied when there were originally %d nnz.\n",nnz,(*t)->nnz);
-  }
-
-  // Copy the computed parameters from dummy to t before freeing it
-  (*t)->sx = dummy->sx;
-  (*t)->sy = dummy->sy;
-  (*t)->sz = dummy->sz;
-
-  struct hacoo_bucket **old_buckets = (*t)->buckets; // Save reference to old buckets
-
-  // Update tensor with new buckets and bucket count
-  (*t)->buckets = new_buckets;
-  (*t)->nbuckets *= 2;
-
-  // Free the old bucket array
-  free_buckets(old_buckets,(*t)->nbuckets / 2);
-  hacoo_free(dummy);
-  free(index);
-
-  //printf("Rehashing completed. tensor has %d nnz and %d buckets.\n",(*t)->nnz,(*t)->nbuckets);
-}
-*/
-
 
 double hacoo_get(struct hacoo_tensor *t, unsigned int *index)
 {
@@ -407,21 +271,6 @@ static struct hacoo_bucket *hacoo_bucket_search(bucket_vector *vec,
   return NULL;
 }
 
-/*
-static struct hacoo_bucket *hacoo_bucket_search(struct hacoo_bucket *b,
-                                                unsigned long long morton)
-{
-  for (; b; b = b->next)
-  {
-    if (b->morton == morton)
-    {
-      return b;
-    }
-  }
-  return NULL;
-}
-  */
-
 static size_t hacoo_max_bits(unsigned int n)
 {
     size_t b1 = sizeof(uint64_t) * 8 / n;
@@ -464,6 +313,18 @@ struct hacoo_tensor *read_tensor_file(FILE *file)
 
   while(!feof(file)) {
     file_entry(t, file);
+  }
+
+  return t;
+}
+
+/* Merge this with regular function at later time */
+struct hacoo_tensor *read_tensor_file_with_base(FILE *file, int zero_base)
+{
+  struct hacoo_tensor *t = file_init(file);
+
+  while(!feof(file)) {
+    file_entry_with_base(t, file, zero_base);
   }
 
   return t;
@@ -539,6 +400,62 @@ void file_entry(struct hacoo_tensor *t, FILE *file) {
   hacoo_set(t, index, value);
 }
 
+/* Merge this with above at later time */
+void file_entry_with_base(struct hacoo_tensor *t, FILE *file, int zero_base) {
+  
+  double value;
+  //unsigned int *index = malloc(t->ndims * sizeof(unsigned int));
+  int *index = malloc(t->ndims * sizeof(int));
+  if (!index) {
+    fprintf(stderr, "Error: Failed to allocate memory for index array.\n");
+    return;
+  }
+
+  /* read the index */
+  for (int i = 0; i < t->ndims; i++) {
+    if (feof(file))
+      return;
+    fscanf(file, "%d", &index[i]);
+  }
+
+  /*if indexes are one-based, like FROSTT tensors,
+  then subtract 1 from everything*/
+  if(!zero_base) {
+    for (int i = 0; i < t->ndims; i++) {
+      if (index[i] == 0) {
+        fprintf(stderr, "Error: Tensor uses base-1 indexing but has index 0 in mode %d\n", i);
+        exit(EXIT_FAILURE);
+      }
+      index[i] -= 1;
+    }
+  }
+
+  unsigned int *uindex = malloc(t->ndims * sizeof(unsigned int));
+  if (!uindex) {
+    fprintf(stderr, "Error: Failed to allocate memory for unsigned index array.\n");
+    free(index);
+    return;
+  }
+
+  for (int i = 0; i < t->ndims; i++) {
+    if (index[i] < 0) {
+      fprintf(stderr, "Error: Negative index after base adjustment at mode %d: %d\n", i, index[i]);
+      free(index);
+      free(uindex);
+      return;
+    }
+    uindex[i] = (unsigned int) index[i];
+  }
+
+  /* read the value */
+  if (feof(file))
+    return;
+  fscanf(file, "%lf", &value);
+
+  /* insert the value */
+  hacoo_set(t, uindex, value);
+}
+
 /* Print out information about the tensor */
 void print_status(struct hacoo_tensor *t) {
   printf("nnz: %d nbuckets: %d\n", t->nnz, t->nbuckets);
@@ -569,31 +486,6 @@ void print_tensor(struct hacoo_tensor *t)
   }
 }
 
-/*
-void print_tensor(struct hacoo_tensor *t)
-{
-  struct hacoo_bucket *b;
-  int index[t->ndims];
-
-  for (int i = 0; i < t->nbuckets; i++) {
-    // get the bucket pointer
-    if (!t->buckets[i])
-      continue;
-
-    // print the bucket heading
-    printf("\nBucket %d\n=============\n", i);
-    for (b = t->buckets[i]; b; b = b->next) {
-      hacoo_extract_index(b, t->ndims, index);
-      printf("0x%lx: ", b->morton);
-      for (int j = 0; j < t->ndims; j++) {
-        printf("%u ", index[j]);
-      }
-      printf("%f\n", b->value);
-    }
-  }
-}
-*/
-
 /* Calculate the frobenius norm of the tensor */
 double frobenius_norm(struct hacoo_tensor *t)
 {
@@ -607,22 +499,6 @@ double frobenius_norm(struct hacoo_tensor *t)
     }
     return sqrt(norm);
 }
-
-/*
-double frobenius_norm(struct hacoo_tensor *t)
-{
-    double norm = 0.0;
-    struct hacoo_bucket *b;
-    for (int i = 0; i < t->nbuckets; i++)
-    {
-        for (b = t->buckets[i]; b; b = b->next)
-        {
-        norm += b->value * b->value;
-        }
-    }
-    return sqrt(norm);
-}
-*/
 
 /*Unused print functions */
 /* Print the nth nonzero element in the tensor */
