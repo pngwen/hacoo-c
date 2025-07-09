@@ -194,28 +194,3 @@ void cpd_result_free(cpd_result_t *result)
     }
     free(result);
 }
-
-
-void gram_test()
-{
-    matrix_t *a = new_matrix(2,2);
-    matrix_t *g = new_matrix(2,2);
-
-    /* populate a with:
-       0.9027    0.4909
-       0.9448    0.4893
-     */
-    a->vals[0][0] = 0.9027; a->vals[0][1] = 0.4909;
-    a->vals[1][0] = 0.9448; a->vals[1][1] = 0.4893;
-
-    printf("Iteration 1 Normalization:\n");
-    copy_matrix_to(g,a);
-    printf("lambda[0]=%f\n", normalize_column(g, 0, 0));
-    printf("lambda[1]=%f\n", normalize_column(g, 1, 0));
-    print_matrix(g);
-    
-    printf("Iteration 2 Normalization:\n");
-    printf("lambda[0]=%f\n", normalize_column(a, 0, 1));
-    printf("lambda[1]=%f\n", normalize_column(a, 1, 1));
-    print_matrix(a);
-}

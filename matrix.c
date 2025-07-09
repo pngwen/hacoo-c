@@ -339,7 +339,7 @@ void mul_matrix(matrix_t *res, matrix_t *a, matrix_t *b)
 
 void mul_transpose_matrix(matrix_t *res, matrix_t *a, matrix_t *b)
 {
-    matrix_t *tmp = new_matrix(a->rows, b->cols);
+    matrix_t *tmp = new_matrix(a->cols, b->cols);
 
     for (int i = 0; i < a->cols; i++)
     {
