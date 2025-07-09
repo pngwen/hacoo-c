@@ -1,9 +1,10 @@
 #include "matrix.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h> // for time
+#include <time.h>
 #include <math.h>  // For fabs()
 #include <string.h>
+#include <cblas.h> //for OpenBLAS
 
 //Define acceptable margin of error
 #define EPSILON 1.0e-2
@@ -63,6 +64,7 @@ matrix_t* copy_matrix(matrix_t *original) {
     return copy;
 }
 
+/* Copies the contents of an existing matrix src into a pre-allocated matrix dest */
 void copy_matrix_to(matrix_t *dest, matrix_t *src) {
     // Ensure the dest has the same dimensions as the src
     if (src->rows != dest->rows || src->cols != dest->cols) {
@@ -75,7 +77,6 @@ void copy_matrix_to(matrix_t *dest, matrix_t *src) {
 
 /* Copy multiple matrices to newly allocated matrices */
 matrix_t** copy_matrices(matrix_t **originals, size_t num_matrices) {
-    // Allocate memory for the array of matrix pointers
     matrix_t **copies = malloc(num_matrices * sizeof(matrix_t *));
     if (!copies) {
         return NULL; // Allocation failed
@@ -88,7 +89,6 @@ matrix_t** copy_matrices(matrix_t **originals, size_t num_matrices) {
             continue;
         }
 
-        // Create a new matrix with the same dimensions
         matrix_t *copy = new_matrix(original->rows, original->cols);
         if (!copy) {
             // Clean up previously allocated matrices
@@ -99,18 +99,15 @@ matrix_t** copy_matrices(matrix_t **originals, size_t num_matrices) {
             return NULL;
         }
 
-        // Copy the data
-        for (size_t i = 0; i < original->rows; i++) {
-            for (size_t j = 0; j < original->cols; j++) {
-                copy->vals[i][j] = original->vals[i][j];
-            }
-        }
+        // Use memcpy for the contiguous data array
+        memcpy(copy->data, original->data, original->rows * original->cols * sizeof(double));
 
         copies[k] = copy;
     }
 
     return copies;
 }
+
 
 void print_matrix(matrix_t *m) {
   //printf("Matrix: (%d x % d)\n", m->rows, m->cols);
@@ -316,6 +313,32 @@ void sub_matrix(matrix_t *res, matrix_t *a, matrix_t *b) {
   }
 }
 
+void mul_matrix(matrix_t *res, matrix_t *a, matrix_t *b) {
+    if (a->cols != b->rows || res->rows != a->rows || res->cols != b->cols) {
+        fprintf(stderr, "Matrix dimension mismatch in mul_matrix\n");
+        return;
+    }
+
+    cblas_dgemm(
+        CblasRowMajor,      // Row-major storage
+        CblasNoTrans,       // No transpose on A
+        CblasNoTrans,       // No transpose on B
+        a->rows,            // M
+        b->cols,            // N
+        a->cols,            // K
+        1.0,                // Alpha
+        a->data,            // A
+        a->cols,            // lda
+        b->data,            // B
+        b->cols,            // ldb
+        0.0,                // Beta
+        res->data,          // C
+        res->cols           // ldc
+    );
+}
+
+/*Old mul matrix*/
+/*
 void mul_matrix(matrix_t *res, matrix_t *a, matrix_t *b)
 {
     matrix_t *tmp = new_matrix(a->rows, b->cols);
@@ -336,6 +359,7 @@ void mul_matrix(matrix_t *res, matrix_t *a, matrix_t *b)
     copy_matrix_to(res, tmp);
     free_matrix(tmp);
 }
+*/
 
 void mul_transpose_matrix(matrix_t *res, matrix_t *a, matrix_t *b)
 {
