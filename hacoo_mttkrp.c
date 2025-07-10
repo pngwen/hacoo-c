@@ -176,10 +176,10 @@ void CUnit_mttkrp_bench(const char *tensor_file, int alg, int zero_base, int tar
 
     if (alg == -1) {
         selected_mttkrp_func = mttkrp;
-        printf("Running Parallel MTTKRP Benchmark\n");
+        printf("Running Parallel MTTKRP Benchmark for %s.\n",tensor_file);
     } else if (alg == -2) {
         selected_mttkrp_func = mttkrp_serial;
-        printf("Running Serial MTTKRP Benchmark\n");
+        printf("Running Serial MTTKRP Benchmark %s.\n",tensor_file);
     } else {
         fprintf(stderr, "Invalid algorithm value: %d. Expected -2 or -1.\n", alg);
         CU_cleanup_registry();

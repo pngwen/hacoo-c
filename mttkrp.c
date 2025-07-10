@@ -37,9 +37,9 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
         int tid = omp_get_thread_num();
         int nthreads = omp_get_num_threads();
 
-        if (tid == 0) {
-            printf("Number of threads: %d\n", nthreads);
-        }
+        //if (tid == 0) {
+            //printf("Number of threads: %d\n", nthreads);
+        //}
 
         partials[tid] = new_matrix(h->dims[n], fmax);
         matrix_t *local_res = partials[tid];
@@ -49,44 +49,88 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
         int end = (start + chunk > h->nbuckets) ? h->nbuckets : start + chunk;
 
         unsigned int *idx = malloc(h->ndims * sizeof(unsigned int));
+        double *rank_vec = malloc(fmax * sizeof(double));
 
         // Loop over assigned bucket vectors
         for (int i = start; i < end; i++) {
             bucket_vector *vec = &h->buckets[i];
-
             if (vec->size == 0)
                 continue;
 
             for (size_t j = 0; j < vec->size; j++) {
                 struct hacoo_bucket *cur = &vec->data[j];
 
+                // Get full index array from compressed HaCOO format
                 hacoo_extract_index(cur, h->ndims, idx);
 
+                // Initialize rank vector with cur->value
                 for (int f = 0; f < fmax; f++) {
-                    double prod = cur->value;
-
-                    for (int d = 0; d < h->ndims; d++) {
-                        if (d == n) continue;
-                        prod *= u[d]->vals[idx[d]][f];
-                    }
-
-                    local_res->vals[idx[n]][f] += prod;
+                    rank_vec[f] = cur->value;
                 }
+
+                // Multiply by the appropriate row from each factor matrix, skipping mode n
+                for (int d = 0; d < h->ndims; d++) {
+                    if (d == n) continue;
+                    double *vec_d = u[d]->vals[idx[d]];
+                    for (int f = 0; f < fmax; f++) {
+                        rank_vec[f] *= vec_d[f];
+                    }
+                }
+
+                // Accumulate into the local result row using daxpy
+                cblas_daxpy(fmax, 1.0, rank_vec, 1, local_res->vals[idx[n]], 1);
             }
         }
 
+        free(rank_vec); // Free thread-local buffer
         free(idx);
     }
 
+    /* Time merge step */
+    double t_start = omp_get_wtime();
+
     // Merge all thread-local results into the global result
-    #pragma omp parallel for collapse(2)
+    /* Hybrid */
+    /*#pragma omp parallel for
+    for (int i = 0; i < h->dims[n]; i++) {
+        for (int f = 0; f < fmax; f++) {
+            double sum = 0.0;
+            for (int t = 0; t < num_threads; t++) {
+                sum += partials[t]->vals[i][f];
+            }
+            res->vals[i][f] = sum;
+        }
+    }*/
+
+    /* Parallel over threads */
+    #pragma omp parallel
+    {
+        int tid = omp_get_thread_num();
+        int chunk = (h->dims[n] + num_threads - 1) / num_threads;
+        int start = tid * chunk;
+        int end = (start + chunk > h->dims[n]) ? h->dims[n] : start + chunk;
+
+        for (int i = start; i < end; i++) {
+            for (int f = 0; f < fmax; f++) {
+                for (int t = 0; t < num_threads; t++) {
+                    res->vals[i][f] += partials[t]->vals[i][f];
+                }
+            }
+        }
+    }
+
+    /*for collapse ver */
+    /*pragma omp parallel for collapse(2)
     for (int i = 0; i < h->dims[n]; i++) {
         for (int f = 0; f < fmax; f++) {
             for (int t = 0; t < num_threads; t++) {
                 res->vals[i][f] += partials[t]->vals[i][f];
             }
         }
-    }
+    }*/
+
+    double t_end = omp_get_wtime();
+    printf("Merge time: %.6f seconds\n", t_end - t_start);
 
     for (int t = 0; t < num_threads; t++) {
         free_matrix(partials[t]);

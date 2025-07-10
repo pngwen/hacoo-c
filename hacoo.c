@@ -383,14 +383,6 @@ void file_entry(struct hacoo_tensor *t, FILE *file) {
     fscanf(file, "%u", &index[i]);
   }
 
-  /*if indexes are base-1, like FROSTT tensors,
-  then subtract 1 from everything*/
-  /*if(t->base == 1) {
-    for (int i = 0; i < t->ndims; i++) {
-      index[i] -= index[i];
-    }
-  }*/
-
   /* read the value */
   if (feof(file))
     return;
@@ -404,7 +396,6 @@ void file_entry(struct hacoo_tensor *t, FILE *file) {
 void file_entry_with_base(struct hacoo_tensor *t, FILE *file, int zero_base) {
   
   double value;
-  //unsigned int *index = malloc(t->ndims * sizeof(unsigned int));
   int *index = malloc(t->ndims * sizeof(int));
   if (!index) {
     fprintf(stderr, "Error: Failed to allocate memory for index array.\n");
@@ -500,7 +491,7 @@ double frobenius_norm(struct hacoo_tensor *t)
     return sqrt(norm);
 }
 
-/*Unused print functions */
+/*Debugging print functions */
 /* Print the nth nonzero element in the tensor */
 /*
 void print_nth_nonzero(struct hacoo_tensor *t, int n) {
