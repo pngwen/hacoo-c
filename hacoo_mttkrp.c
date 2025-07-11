@@ -14,15 +14,17 @@
 /* Function pointer type for MTTKRP */
 typedef matrix_t *(*mttkrp_func_t)(struct hacoo_tensor *, matrix_t **, unsigned int);
 
-
 /* Function pointer to MTTKRP function */
 mttkrp_func_t selected_mttkrp_func;
 
-/* Function declarations */
+/* Print usage guide */
 void print_usage(const char *progname);
 
-/* Functions for benchmarking MTTRKP */
+/* CUnit suite initialization and cleanup */
 int suite_bench_init(const char *tensor_filename, int zero_base, int rank);
+int suite_cleanup(void);
+
+/* Functions for benchmarking MTTRKP */
 int generate_factor_matrices();
 void CUnit_mttkrp_bench(const char *tensor_file, int alg, int zero_base, int target_mode, int rank);
 
@@ -137,13 +139,6 @@ int main(int argc, char *argv[]) {
 
     if (!tensor_file) {
         fprintf(stderr, "Missing required tensor file... exiting\n");
-        print_usage(argv[0]);
-        exit(1);
-    }
-
-    /* Check if rank was proidved (required arg) */
-    if (rank == NULL) {
-        fprintf(stderr, "Missing required argument -r, --rank.\n");
         print_usage(argv[0]);
         exit(1);
     }

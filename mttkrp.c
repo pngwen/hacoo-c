@@ -18,6 +18,7 @@ Returns:
 #include "hacoo.h"
 #include "matrix.h"
 #include <omp.h>
+#include <cblas.h>
 #include <stdio.h>
 
 /* Parallel MTTKRP */
