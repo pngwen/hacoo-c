@@ -17,8 +17,10 @@ Returns:
 #include "mttkrp.h"
 #include "hacoo.h"
 #include "matrix.h"
+#include "common.hpp"
 #include <omp.h>
 #include <stdio.h>
+#include <cblas.h>
 
 /* Parallel MTTKRP */
 matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
@@ -30,7 +32,7 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
 
     int num_threads = omp_get_max_threads();
 
-    matrix_t **partials = malloc(num_threads * sizeof(matrix_t *));
+    matrix_t **partials = (matrix_t **) MALLOC(num_threads * sizeof(matrix_t *));
 
     #pragma omp parallel
     {
@@ -48,8 +50,8 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
         int start = tid * chunk;
         int end = (start + chunk > h->nbuckets) ? h->nbuckets : start + chunk;
 
-        unsigned int *idx = malloc(h->ndims * sizeof(unsigned int));
-        double *rank_vec = malloc(fmax * sizeof(double));
+        unsigned int *idx = (unsigned int *) MALLOC(h->ndims * sizeof(unsigned int));
+        double *rank_vec = (double *) MALLOC(fmax * sizeof(double));
 
         // Loop over assigned bucket vectors
         for (int i = start; i < end; i++) {
@@ -78,12 +80,12 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
                 }
 
                 // Accumulate into the local result row using daxpy
-                cblas_daxpy(fmax, 1.0, rank_vec, 1, local_res->vals[idx[n]], 1);
+                cblas_daxpy(fmax, 1.0, rank_vec, 1, local_res->data + idx[n] * fmax, 1);
             }
         }
 
-        free(rank_vec); // Free thread-local buffer
-        free(idx);
+        FREE(rank_vec); // Free thread-local buffer
+        FREE(idx);
     }
 
     /* Time merge step */
@@ -136,7 +138,7 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
         free_matrix(partials[t]);
     }
 
-    free(partials);
+    FREE(partials);
 
     return res;
 }
@@ -146,9 +148,9 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
     unsigned int fmax = u[0]->cols;
     matrix_t *res = new_matrix(h->dims[n], fmax);
 
-    unsigned int *idx = malloc(sizeof(unsigned int) * h->ndims);
-    unsigned int *tind = malloc(sizeof(unsigned int) * h->nnz);
-    double *t = malloc(sizeof(double) * h->nnz);
+    unsigned int *idx = (unsigned int *) MALLOC(sizeof(unsigned int) * h->ndims);
+    unsigned int *tind = (unsigned int *) MALLOC(sizeof(unsigned int) * h->nnz);
+    double *t = (double *) MALLOC(sizeof(double) * h->nnz);
 
     if (tind == NULL || t == NULL) {
         fprintf(stderr, "Error: Memory allocation failed.\n");
@@ -208,9 +210,9 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
         }
     }
 
-    free(idx);
-    free(tind);
-    free(t);
+    FREE(idx);
+    FREE(tind);
+    FREE(t);
 
     return res;
 }
@@ -229,7 +231,7 @@ void mttkrp_test(struct hacoo_tensor *t)
   // make an array of 3 matrices
   int num_matrices = 3;
 
-  matrix_t **u = (matrix_t **)malloc(sizeof(matrix_t *) * num_matrices);
+  matrix_t **u = (matrix_t **)MALLOC(sizeof(matrix_t *) * num_matrices);
 
   u[0] = array_to_matrix(a, 2, 3);
   u[1] = array_to_matrix(b, 3, 3);
@@ -249,7 +251,7 @@ void mttkrp_test(struct hacoo_tensor *t)
   {
     free_matrix(u[i]);
   }
-  free(u);
+  FREE(u);
 
   // free m
   free_matrix(m);

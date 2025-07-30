@@ -8,12 +8,12 @@
 #include "hacoo.h"
 #include "matrix.h"
 #include "mttkrp.h"
+#include "common.hpp"
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
 /* Function pointer type for MTTKRP */
 typedef matrix_t *(*mttkrp_func_t)(struct hacoo_tensor *, matrix_t **, unsigned int);
-
 
 /* Function pointer to MTTKRP function */
 mttkrp_func_t selected_mttkrp_func;
@@ -25,6 +25,7 @@ void print_usage(const char *progname);
 int suite_bench_init(const char *tensor_filename, int zero_base, int rank);
 int generate_factor_matrices();
 void CUnit_mttkrp_bench(const char *tensor_file, int alg, int zero_base, int target_mode, int rank);
+int suite_cleanup(void);
 
 /* Globals */
 struct hacoo_tensor *global_tensor = NULL;
@@ -247,7 +248,8 @@ int suite_bench_init(const char *tensor_filename, int zero_base, int rank) {
 
     /* Allocate and generate factor matrices*/
     global_matrix_count = global_tensor->ndims;
-    global_factors = malloc(sizeof(matrix_t *) * global_matrix_count);
+    global_factors = (matrix_t **) MALLOC(sizeof(matrix_t *) * global_matrix_count);
+    
     if (!global_factors) {
         fprintf(stderr, "Error allocating factor matrices\n");
         return 1;
@@ -348,7 +350,7 @@ void verify_mttkrp_mode(int mode) {
 
 /* Compute MTTKRP over all modes */
 matrix_t **get_mttkrp_results(struct hacoo_tensor *t, matrix_t **factor_matrices, int matrix_count, mttkrp_func_t f) {
-    matrix_t **results = (matrix_t **)malloc(sizeof(matrix_t *) * t->ndims);
+    matrix_t **results = (matrix_t **)MALLOC(sizeof(matrix_t *) * t->ndims);
     for (int i = 0; i < matrix_count; i++) {
         results[i] = f(t, factor_matrices, i);
     }

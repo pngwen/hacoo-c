@@ -56,18 +56,18 @@ static void gram_product(matrix_t *res, matrix_t **factor, unsigned int modes, u
 
 static cpd_result_t *cpd_alloc(struct hacoo_tensor *t, unsigned int rank)
 {
-    cpd_result_t *result = calloc(1, sizeof(cpd_result_t));
+    cpd_result_t *result = (cpd_result_t *) calloc(1, sizeof(cpd_result_t));
     if (!result) { goto bad; }
 
     result->rank = rank;
     result->ndims = t->ndims;
 
     // Allocate list of pointers for factor matrices
-    result->factors = calloc(t->ndims, sizeof(matrix_t *));
+    result->factors = (matrix_t **) calloc(t->ndims, sizeof(matrix_t *));
     if(!result->factors) { goto bad; }
 
     // Allocate the lambda vector
-    result->lambda = calloc(rank, sizeof(double));
+    result->lambda = (double *) calloc(rank, sizeof(double));
     if (!result->lambda) { goto bad; }
     for(int i = 0; i < result->rank; i++)
     {
@@ -177,7 +177,7 @@ printf("Iter %u, mode %u: factor norm = %f\n", iter, mode, matrix_frobenius_norm
     return result;
 }
 
-// Free the memory allocated for the CPD result
+// free the memory allocated for the CPD result
 void cpd_result_free(cpd_result_t *result)
 {
     if(!result) return;

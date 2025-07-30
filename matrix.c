@@ -1,4 +1,5 @@
 #include "matrix.h"
+#include "common.hpp" //for aligned malloc
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -9,40 +10,54 @@
 //Define acceptable margin of error
 #define EPSILON 1.0e-2
 
-
 matrix_t *new_matrix(unsigned int n_rows, unsigned int n_cols) {
-  matrix_t *matrix = (matrix_t *)malloc(sizeof(matrix_t));
-  matrix->rows = n_rows;
-  matrix->cols = n_cols;
-  double **vals = (double **)malloc(sizeof(double *) * n_rows);
-  vals[0] = (double *)calloc(n_rows * n_cols, sizeof(double)); // Allocate memory for the first row
-  for (int x = 1; x < n_rows; x++) {
-    vals[x] = vals[x - 1] + n_cols; // Point subsequent rows to the same memory block
+  matrix_t *A = (matrix_t *) MALLOC(sizeof(matrix_t));
+  if (!A) return NULL;
+
+  A->rows = n_rows;
+  A->cols = n_cols;
+
+  // Allocate aligned memory for the data block
+  A->data = (double *) MALLOC(n_rows * n_cols * sizeof(double));
+  if (!A->data) {
+    FREE(A);
+    return NULL;
   }
-  matrix->data = vals[0];
-  matrix->vals = vals;
-  return matrix;
+
+  // Allocate normal memory for the row pointers
+  A->vals = (double **) malloc(n_rows * sizeof(double *));
+  if (!A->vals) {
+    FREE(A->data);
+    FREE(A);
+    return NULL;
+  }
+
+  for (unsigned int i = 0; i < n_rows; i++) {
+      A->vals[i] = &A->data[i * n_cols];
+  }
+
+  return A;
 }
 
 /* Generate a random matrix of a given size and value range */
 matrix_t* new_random_matrix(size_t rows, size_t cols, double min_value, double max_value) {
-    matrix_t *random_matrix = new_matrix(rows, cols);
-    static int seeded = 0;
+  matrix_t *random_matrix = new_matrix(rows, cols);
+  static int seeded = 0;
 
-    // Seed the random number generator
-    if(!seeded) {
-        seeded=1;
-        srand((unsigned int)time(NULL));
-    }
+  // Seed the random number generator
+  if(!seeded) {
+      seeded=1;
+      srand((unsigned int)time(NULL));
+  }
 
-    // Fill the matrix with random values in the specified range [min_value, max_value]
-    for (size_t i = 0; i < rows; i++) {
-        for (size_t j = 0; j < cols; j++) {
-            random_matrix->vals[i][j] = min_value + (rand() / (double)RAND_MAX) * (max_value - min_value);
-        }
-    }
+  // Fill the matrix with random values in the specified range [min_value, max_value]
+  for (size_t i = 0; i < rows; i++) {
+      for (size_t j = 0; j < cols; j++) {
+          random_matrix->vals[i][j] = min_value + (rand() / (double)RAND_MAX) * (max_value - min_value);
+      }
+  }
 
-    return random_matrix;
+  return random_matrix;
 }
 
 matrix_t *array_to_matrix(double *data, unsigned int n_rows, unsigned int n_cols) {
@@ -77,7 +92,7 @@ void copy_matrix_to(matrix_t *dest, matrix_t *src) {
 
 /* Copy multiple matrices to newly allocated matrices */
 matrix_t** copy_matrices(matrix_t **originals, size_t num_matrices) {
-    matrix_t **copies = malloc(num_matrices * sizeof(matrix_t *));
+    matrix_t **copies = (matrix_t **) MALLOC(num_matrices * sizeof(matrix_t *));
     if (!copies) {
         return NULL; // Allocation failed
     }
@@ -95,7 +110,7 @@ matrix_t** copy_matrices(matrix_t **originals, size_t num_matrices) {
             for (size_t j = 0; j < k; j++) {
                 free_matrix(copies[j]);
             }
-            free(copies);
+            FREE(copies);
             return NULL;
         }
 
@@ -145,9 +160,9 @@ void print_matrices(matrix_t **matrices, int num_matrices) {
 /* Free a single matrix */
 void free_matrix(matrix_t *m) {
     if (!m) { return; }
-    if(m->data) free(m->data);
+    if(m->data) FREE(m->data);
     if(m->vals) free(m->vals);
-    free(m);
+    FREE(m);
 }
 
 // Function to read matrices from a file into an array of matrix_t pointers
@@ -171,7 +186,7 @@ int read_matrices_from_file(const char *filename, matrix_t ***matrices) {
 
     // Allocate memory for the new array of matrix_t pointers
     matrix_t **new_matrix_array =
-        (matrix_t **)malloc((matrix_count + 1) * sizeof(matrix_t *));
+        (matrix_t **)MALLOC((matrix_count + 1) * sizeof(matrix_t *));
     if (!new_matrix_array) {
       perror("Memory allocation failed");
       fclose(file);
@@ -183,7 +198,7 @@ int read_matrices_from_file(const char *filename, matrix_t ***matrices) {
       for (int i = 0; i < matrix_count; i++) {
         new_matrix_array[i] = matrix_array[i];
       }
-      free(matrix_array); // Free the old array after copying
+      FREE(matrix_array); // Free the old array after copying
     }
 
     // Allocate memory for the new matrix
@@ -191,7 +206,7 @@ int read_matrices_from_file(const char *filename, matrix_t ***matrices) {
     if (!new_matrix_array[matrix_count]) {
       perror("Memory allocation failed");
       fclose(file);
-      free(new_matrix_array); // Free newly allocated memory
+      FREE(new_matrix_array); // Free newly allocated memory
       return -1;
     }
 
@@ -202,7 +217,7 @@ int read_matrices_from_file(const char *filename, matrix_t ***matrices) {
         if (fscanf(file, "%lf", &new_matrix_array[matrix_count]->vals[i][j]) != 1) {
           fprintf(stderr, "Error reading matrix data at row %d, col %d (matrix %d)\n", i, j, matrix_count);
           fclose(file);
-          free(new_matrix_array);
+          FREE(new_matrix_array);
           return -1;
         }
       }
@@ -223,7 +238,7 @@ void free_matrices(matrix_t **matrices, int matrix_count) {
   for (int i = 0; i < matrix_count; i++) {
       free_matrix(matrices[i]); // Free each matrix
   }
-  free(matrices);
+  FREE(matrices);
 }
 
 // Compare two matrices for equality within a given tolerance

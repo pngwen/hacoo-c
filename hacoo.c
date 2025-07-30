@@ -2,6 +2,7 @@
  * Purpose: Implementation of the hacoo sparse tensor library.
  */
 #include "hacoo.h"
+#include "common.hpp"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,7 +27,7 @@ static size_t hacoo_max_bits(unsigned int n);
 struct hacoo_tensor *hacoo_alloc(unsigned int ndims, unsigned int *dims,
                                  size_t nbuckets, unsigned int load)
 {
-  struct hacoo_tensor *t = malloc(sizeof(struct hacoo_tensor));
+  struct hacoo_tensor *t = (struct hacoo_tensor *) MALLOC(sizeof(struct hacoo_tensor));
 
   /* handle allocation error */
   if (t == NULL) {
@@ -35,7 +36,7 @@ struct hacoo_tensor *hacoo_alloc(unsigned int ndims, unsigned int *dims,
 
   /* initialize tensor fields */
   t->ndims = ndims;
-  t->dims = calloc(ndims, sizeof(unsigned int));
+  t->dims = (unsigned int *) calloc(ndims, sizeof(unsigned int));
   if (!t->dims) {
     goto error;
   }
@@ -46,7 +47,7 @@ struct hacoo_tensor *hacoo_alloc(unsigned int ndims, unsigned int *dims,
   t->nnz = 0;
 
   // Allocate array of bucket_vector structs
-  t->buckets = malloc(nbuckets * sizeof(bucket_vector));
+  t->buckets = (bucket_vector *) MALLOC(nbuckets * sizeof(bucket_vector));
   if (!t->buckets) {
     goto error;
   }
@@ -68,9 +69,9 @@ error:
 
 void hacoo_free(struct hacoo_tensor *t)
 {
-  if (t->dims) {free(t->dims);}
+  if (t->dims) {FREE(t->dims);}
   if (t->buckets) {hacoo_free_buckets(t);}
-  free(t);
+  FREE(t);
 }
 
 /* Access functions */
@@ -120,7 +121,7 @@ void hacoo_rehash(struct hacoo_tensor **t)
 
   hacoo_compute_params(dummy);
 
-  unsigned int *index = malloc(sizeof(unsigned int) * (*t)->ndims);
+  unsigned int *index = (unsigned int *) MALLOC(sizeof(unsigned int) * (*t)->ndims);
   if (!index) {
     fprintf(stderr, "Error: Failed to allocate index array during rehash.\n");
     hacoo_free(dummy);
@@ -159,7 +160,7 @@ void hacoo_rehash(struct hacoo_tensor **t)
 
   dummy->buckets = NULL; // Prevent double free
   hacoo_free(dummy);
-  free(index);
+  FREE(index);
 }
 
 double hacoo_get(struct hacoo_tensor *t, unsigned int *index)
@@ -205,7 +206,7 @@ static void hacoo_free_buckets(struct hacoo_tensor *t)
   for (size_t i = 0; i < t->nbuckets; i++) {
     bucket_vector_free(&t->buckets[i]);
   }
-  free(t->buckets);
+  FREE(t->buckets);
   t->buckets = NULL;
 }
 
@@ -215,7 +216,7 @@ static void free_buckets(bucket_vector *buckets, size_t nbuckets)
   for (size_t i = 0; i < nbuckets; ++i) {
     bucket_vector_free(&buckets[i]);
   }
-  free(buckets);
+  FREE(buckets);
 }
 
 // Encodes index, returns morton code
@@ -283,7 +284,7 @@ static size_t hacoo_max_bits(unsigned int n)
 struct hacoo_bucket *hacoo_new_bucket()
 {
   struct hacoo_bucket *b;
-  b = calloc(1, sizeof(struct hacoo_bucket));
+  b = (struct hacoo_bucket *) calloc(1, sizeof(struct hacoo_bucket));
   if (!b) {
     fprintf(stderr, "Error: Failed to allocate memory for new bucket.\n");
     return NULL;
@@ -346,7 +347,7 @@ struct hacoo_tensor *file_init(FILE *file) {
   count++;
 
   // Allocate memory for the array of dimensions
-  unsigned int *dims = malloc(count * sizeof(unsigned int));
+  unsigned int *dims = (unsigned int *) MALLOC(count * sizeof(unsigned int));
   if (!dims)
     return NULL;
 
@@ -361,7 +362,7 @@ struct hacoo_tensor *file_init(FILE *file) {
   struct hacoo_tensor *t = hacoo_alloc(count, dims, MIN_BUCKETS, LOAD);
 
   // Free the allocated memory for the dimensions array
-  free(dims);
+  FREE(dims);
 
   return t;
 }
@@ -370,7 +371,7 @@ struct hacoo_tensor *file_init(FILE *file) {
 void file_entry(struct hacoo_tensor *t, FILE *file) {
 
   double value;
-  unsigned int *index = malloc(t->ndims * sizeof(unsigned int));
+  unsigned int *index = (unsigned int *) MALLOC(t->ndims * sizeof(unsigned int));
   if (!index) {
     fprintf(stderr, "Error: Failed to allocate memory for index array.\n");
     return;
@@ -396,7 +397,7 @@ void file_entry(struct hacoo_tensor *t, FILE *file) {
 void file_entry_with_base(struct hacoo_tensor *t, FILE *file, int zero_base) {
   
   double value;
-  int *index = malloc(t->ndims * sizeof(int));
+  int *index = (int *) malloc(t->ndims * sizeof(int));
   if (!index) {
     fprintf(stderr, "Error: Failed to allocate memory for index array.\n");
     return;
@@ -421,7 +422,7 @@ void file_entry_with_base(struct hacoo_tensor *t, FILE *file, int zero_base) {
     }
   }
 
-  unsigned int *uindex = malloc(t->ndims * sizeof(unsigned int));
+  unsigned int *uindex = (unsigned int *) malloc(t->ndims * sizeof(unsigned int));
   if (!uindex) {
     fprintf(stderr, "Error: Failed to allocate memory for unsigned index array.\n");
     free(index);

@@ -69,3 +69,6 @@ tensors
 #ignore large verify_mttkrp files
 verify_mttkrp/enron*
 verify_mttkrp/nell-2*
+
+#ignore benchmarking logs
+benchmarking_logs
