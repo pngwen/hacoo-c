@@ -11,7 +11,7 @@
 #define EPSILON 1.0e-2
 
 matrix_t *new_matrix(unsigned int n_rows, unsigned int n_cols) {
-  matrix_t *A = (matrix_t *) MALLOC(sizeof(matrix_t));
+  matrix_t *A = (matrix_t *) malloc(sizeof(matrix_t));
   if (!A) return NULL;
 
   A->rows = n_rows;

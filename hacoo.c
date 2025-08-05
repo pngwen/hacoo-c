@@ -27,16 +27,15 @@ static size_t hacoo_max_bits(unsigned int n);
 struct hacoo_tensor *hacoo_alloc(unsigned int ndims, unsigned int *dims,
                                  size_t nbuckets, unsigned int load)
 {
-  struct hacoo_tensor *t = (struct hacoo_tensor *) MALLOC(sizeof(struct hacoo_tensor));
+  struct hacoo_tensor *t = (struct hacoo_tensor *) malloc(sizeof(struct hacoo_tensor));
 
-  /* handle allocation error */
   if (t == NULL) {
     goto error;
   }
 
   /* initialize tensor fields */
   t->ndims = ndims;
-  t->dims = (unsigned int *) calloc(ndims, sizeof(unsigned int));
+  t->dims = (unsigned int *) MALLOC(ndims * sizeof(unsigned int));
   if (!t->dims) {
     goto error;
   }
@@ -46,10 +45,11 @@ struct hacoo_tensor *hacoo_alloc(unsigned int ndims, unsigned int *dims,
   t->load = load;
   t->nnz = 0;
 
-  // Allocate array of bucket_vector structs
-  t->buckets = (bucket_vector *) MALLOC(nbuckets * sizeof(bucket_vector));
+  // Allocate array of bucket_vector structs (aligned for cache efficiency)
+  t->buckets = (bucket_vector *)MALLOC(nbuckets * sizeof(bucket_vector));
   if (!t->buckets) {
-    goto error;
+      fprintf(stderr, "Error: Failed to allocate aligned memory for buckets.\n");
+      goto error;
   }
 
   // Initialize each bucket_vector
@@ -69,9 +69,17 @@ error:
 
 void hacoo_free(struct hacoo_tensor *t)
 {
-  if (t->dims) {FREE(t->dims);}
-  if (t->buckets) {hacoo_free_buckets(t);}
-  FREE(t);
+    if (!t) return;
+
+    if (t->dims) {
+        FREE(t->dims);
+        t->dims = NULL;
+    }
+    if (t->buckets) {
+        hacoo_free_buckets(t);
+        t->buckets = NULL;
+    }
+    FREE(t);
 }
 
 /* Access functions */
@@ -121,7 +129,7 @@ void hacoo_rehash(struct hacoo_tensor **t)
 
   hacoo_compute_params(dummy);
 
-  unsigned int *index = (unsigned int *) MALLOC(sizeof(unsigned int) * (*t)->ndims);
+  unsigned int *index = (unsigned int *) malloc(sizeof(unsigned int) * (*t)->ndims);
   if (!index) {
     fprintf(stderr, "Error: Failed to allocate index array during rehash.\n");
     hacoo_free(dummy);
@@ -160,7 +168,7 @@ void hacoo_rehash(struct hacoo_tensor **t)
 
   dummy->buckets = NULL; // Prevent double free
   hacoo_free(dummy);
-  FREE(index);
+  free(index);
 }
 
 double hacoo_get(struct hacoo_tensor *t, unsigned int *index)
@@ -284,13 +292,14 @@ static size_t hacoo_max_bits(unsigned int n)
 struct hacoo_bucket *hacoo_new_bucket()
 {
   struct hacoo_bucket *b;
-  b = (struct hacoo_bucket *) calloc(1, sizeof(struct hacoo_bucket));
+  b = (struct hacoo_bucket *) MALLOC(sizeof(struct hacoo_bucket));
   if (!b) {
     fprintf(stderr, "Error: Failed to allocate memory for new bucket.\n");
     return NULL;
   }
-  b->morton = 0;
-  b->value = 0;
+
+  // Zero initialize
+  memset(b, 0, sizeof(struct hacoo_bucket));
 
   return b;
 }
@@ -405,17 +414,23 @@ void file_entry_with_base(struct hacoo_tensor *t, FILE *file, int zero_base) {
 
   /* read the index */
   for (int i = 0; i < t->ndims; i++) {
-    if (feof(file))
+    if (feof(file)) {
+      free(index);
       return;
-    fscanf(file, "%d", &index[i]);
+    }
+    if (fscanf(file, "%d", &index[i]) != 1) {
+      fprintf(stderr, "Error: Failed to read index %d\n", i);
+      free(index);
+      return;
+    }
   }
 
-  /*if indexes are one-based, like FROSTT tensors,
-  then subtract 1 from everything*/
-  if(!zero_base) {
+  /*if indexes are one-based, like FROSTT tensors, subtract 1*/
+  if (!zero_base) {
     for (int i = 0; i < t->ndims; i++) {
       if (index[i] == 0) {
         fprintf(stderr, "Error: Tensor uses base-1 indexing but has index 0 in mode %d\n", i);
+        free(index);
         exit(EXIT_FAILURE);
       }
       index[i] -= 1;
@@ -439,13 +454,18 @@ void file_entry_with_base(struct hacoo_tensor *t, FILE *file, int zero_base) {
     uindex[i] = (unsigned int) index[i];
   }
 
-  /* read the value */
-  if (feof(file))
+  if (fscanf(file, "%lf", &value) != 1) {
+    fprintf(stderr, "Error: Failed to read value\n");
+    free(index);
+    free(uindex);
     return;
-  fscanf(file, "%lf", &value);
+  }
 
   /* insert the value */
   hacoo_set(t, uindex, value);
+
+  free(index);
+  free(uindex);
 }
 
 /* Print out information about the tensor */
