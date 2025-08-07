@@ -58,17 +58,24 @@ int main(int argc, char *argv[])
 
     // Perform CPD
     double tol = 1e-5;
-    matrix_t **factors = cpd(tensor, rank, max_iter, tol);
+    cpd_result_t *result= cpd(tensor, rank, max_iter, tol);
 
     // Print the factor matrices
     for (unsigned int i = 0; i < tensor->ndims; i++)
     {
         printf("Factor matrix %u:\n", i);
-        print_matrix(factors[i]);
-        free_matrix(factors[i]);
+        print_matrix(result->factors[i]);
     }
 
-    free(factors);
+    // Print the lambdas
+    printf("Lambdas:\n");
+    for (unsigned int i = 0; i < result->rank; i++)
+    {
+        printf("%f ", result->lambda[i]);
+    }
+    printf("\n");
+
+    cpd_result_free(result);
     hacoo_free(tensor);
 
     return 0;

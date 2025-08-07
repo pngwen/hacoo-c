@@ -1,8 +1,10 @@
 #include "matrix.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h> // for time
+#include <time.h>
 #include <math.h>  // For fabs()
+#include <string.h>
+#include <cblas.h> //for OpenBLAS
 
 //Define acceptable margin of error
 #define EPSILON 1.0e-2
@@ -13,9 +15,11 @@ matrix_t *new_matrix(unsigned int n_rows, unsigned int n_cols) {
   matrix->rows = n_rows;
   matrix->cols = n_cols;
   double **vals = (double **)malloc(sizeof(double *) * n_rows);
-  for (int x = 0; x < n_rows; x++) {
-    vals[x] = (double *)calloc(n_cols, sizeof(double));
+  vals[0] = (double *)calloc(n_rows * n_cols, sizeof(double)); // Allocate memory for the first row
+  for (int x = 1; x < n_rows; x++) {
+    vals[x] = vals[x - 1] + n_cols; // Point subsequent rows to the same memory block
   }
+  matrix->data = vals[0];
   matrix->vals = vals;
   return matrix;
 }
@@ -23,9 +27,13 @@ matrix_t *new_matrix(unsigned int n_rows, unsigned int n_cols) {
 /* Generate a random matrix of a given size and value range */
 matrix_t* new_random_matrix(size_t rows, size_t cols, double min_value, double max_value) {
     matrix_t *random_matrix = new_matrix(rows, cols);
+    static int seeded = 0;
 
     // Seed the random number generator
-    srand((unsigned int)time(NULL));
+    if(!seeded) {
+        seeded=1;
+        srand((unsigned int)time(NULL));
+    }
 
     // Fill the matrix with random values in the specified range [min_value, max_value]
     for (size_t i = 0; i < rows; i++) {
@@ -51,20 +59,24 @@ matrix_t *array_to_matrix(double *data, unsigned int n_rows, unsigned int n_cols
 matrix_t* copy_matrix(matrix_t *original) {
     // Create a new matrix with the same dimensions
     matrix_t *copy = new_matrix(original->rows, original->cols);
-
-    // Copy the data from the original matrix to the new one
-    for (size_t i = 0; i < original->rows; i++) {
-        for (size_t j = 0; j < original->cols; j++) {
-            copy->vals[i][j] = original->vals[i][j];
-        }
-    }
+    memcpy(copy->data, original->data, original->rows * original->cols * sizeof(double));
 
     return copy;
 }
 
+/* Copies the contents of an existing matrix src into a pre-allocated matrix dest */
+void copy_matrix_to(matrix_t *dest, matrix_t *src) {
+    // Ensure the dest has the same dimensions as the src
+    if (src->rows != dest->rows || src->cols != dest->cols) {
+        fprintf(stderr, "Error: Dimensions of src and dest do not match.\n");
+        return;
+    }
+
+    memcpy(dest->data, src->data, src->rows * src->cols * sizeof(double));
+}
+
 /* Copy multiple matrices to newly allocated matrices */
 matrix_t** copy_matrices(matrix_t **originals, size_t num_matrices) {
-    // Allocate memory for the array of matrix pointers
     matrix_t **copies = malloc(num_matrices * sizeof(matrix_t *));
     if (!copies) {
         return NULL; // Allocation failed
@@ -77,7 +89,6 @@ matrix_t** copy_matrices(matrix_t **originals, size_t num_matrices) {
             continue;
         }
 
-        // Create a new matrix with the same dimensions
         matrix_t *copy = new_matrix(original->rows, original->cols);
         if (!copy) {
             // Clean up previously allocated matrices
@@ -88,18 +99,15 @@ matrix_t** copy_matrices(matrix_t **originals, size_t num_matrices) {
             return NULL;
         }
 
-        // Copy the data
-        for (size_t i = 0; i < original->rows; i++) {
-            for (size_t j = 0; j < original->cols; j++) {
-                copy->vals[i][j] = original->vals[i][j];
-            }
-        }
+        // Use memcpy for the contiguous data array
+        memcpy(copy->data, original->data, original->rows * original->cols * sizeof(double));
 
         copies[k] = copy;
     }
 
     return copies;
 }
+
 
 void print_matrix(matrix_t *m) {
   //printf("Matrix: (%d x % d)\n", m->rows, m->cols);
@@ -135,11 +143,11 @@ void print_matrices(matrix_t **matrices, int num_matrices) {
 }
 
 /* Free a single matrix */
-matrix_t *free_matrix(matrix_t *m) {
-  for (int x = 0; x < m->rows; x++) {
-    free(m->vals[x]);
-  }
-  free(m->vals);
+void free_matrix(matrix_t *m) {
+    if (!m) { return; }
+    if(m->data) free(m->data);
+    if(m->vals) free(m->vals);
+    free(m);
 }
 
 // Function to read matrices from a file into an array of matrix_t pointers
@@ -179,7 +187,7 @@ int read_matrices_from_file(const char *filename, matrix_t ***matrices) {
     }
 
     // Allocate memory for the new matrix
-    new_matrix_array[matrix_count] = (matrix_t *)malloc(sizeof(matrix_t));
+    new_matrix_array[matrix_count] = new_matrix(rows, cols);
     if (!new_matrix_array[matrix_count]) {
       perror("Memory allocation failed");
       fclose(file);
@@ -187,29 +195,6 @@ int read_matrices_from_file(const char *filename, matrix_t ***matrices) {
       return -1;
     }
 
-    // Set the matrix dimensions
-    new_matrix_array[matrix_count]->rows = rows;
-    new_matrix_array[matrix_count]->cols = cols;
-    new_matrix_array[matrix_count]->vals =
-        (double **)malloc(rows * sizeof(double *));
-    if (!new_matrix_array[matrix_count]->vals) {
-      perror("Memory allocation failed");
-      fclose(file);
-      free(new_matrix_array); // Free memory on error
-      return -1;
-    }
-
-    // Allocate memory for each row in the matrix
-    for (int i = 0; i < rows; i++) {
-      new_matrix_array[matrix_count]->vals[i] =
-          (double *)malloc(cols * sizeof(double));
-      if (!new_matrix_array[matrix_count]->vals[i]) {
-        perror("Memory allocation failed");
-        fclose(file);
-        free(new_matrix_array); // Free memory on error
-        return -1;
-      }
-    }
 
     // Read the matrix data
     for (int i = 0; i < rows; i++) {
@@ -236,11 +221,7 @@ int read_matrices_from_file(const char *filename, matrix_t ***matrices) {
 // Free an array of matrices
 void free_matrices(matrix_t **matrices, int matrix_count) {
   for (int i = 0; i < matrix_count; i++) {
-    for (int j = 0; j < matrices[i]->rows; j++) {
-      free(matrices[i]->vals[j]);
-    }
-    free(matrices[i]->vals);
-    free(matrices[i]);
+      free_matrix(matrices[i]); // Free each matrix
   }
   free(matrices);
 }
@@ -332,32 +313,73 @@ void sub_matrix(matrix_t *res, matrix_t *a, matrix_t *b) {
   }
 }
 
+void mul_matrix(matrix_t *res, matrix_t *a, matrix_t *b) {
+    if (a->cols != b->rows || res->rows != a->rows || res->cols != b->cols) {
+        fprintf(stderr, "Matrix dimension mismatch in mul_matrix\n");
+        return;
+    }
+
+    cblas_dgemm(
+        CblasRowMajor,      // Row-major storage
+        CblasNoTrans,       // No transpose on A
+        CblasNoTrans,       // No transpose on B
+        a->rows,            // M
+        b->cols,            // N
+        a->cols,            // K
+        1.0,                // Alpha
+        a->data,            // A
+        a->cols,            // lda
+        b->data,            // B
+        b->cols,            // ldb
+        0.0,                // Beta
+        res->data,          // C
+        res->cols           // ldc
+    );
+}
+
+/*Old mul matrix*/
+/*
 void mul_matrix(matrix_t *res, matrix_t *a, matrix_t *b)
 {
+    matrix_t *tmp = new_matrix(a->rows, b->cols);
+
     for (int i = 0; i < a->rows; i++)
     {
         for (int j = 0; j < b->cols; j++)
         {
+            tmp->vals[i][j] = 0.0;
             for (int k = 0; k < a->cols; k++)
             {
-                res->vals[i][j] += a->vals[i][k] * b->vals[k][j];
+                tmp->vals[i][j] += a->vals[i][k] * b->vals[k][j];
             }
         }
     }
+
+    // Copy the result to res
+    copy_matrix_to(res, tmp);
+    free_matrix(tmp);
 }
+*/
 
 void mul_transpose_matrix(matrix_t *res, matrix_t *a, matrix_t *b)
 {
+    matrix_t *tmp = new_matrix(a->cols, b->cols);
+
     for (int i = 0; i < a->cols; i++)
     {
         for (int j = 0; j < b->cols; j++)
         {
+            tmp->vals[i][j] = 0.0;
             for (int k = 0; k < a->rows; k++)
             {
-                res->vals[i][j] += a->vals[k][i] * b->vals[k][j];
+                tmp->vals[i][j] += a->vals[k][i] * b->vals[k][j];
             }
         }
     }
+
+    // Copy the result to res
+    copy_matrix_to(res, tmp);
+    free_matrix(tmp);
 }
 
 
@@ -376,75 +398,60 @@ void scale_matrix(matrix_t *m, double scalar)
 
 void invert_matrix(matrix_t *res, matrix_t *a)
 {
-    // Check if the matrix is square
     if (a->rows != a->cols)
-    {
-        //TODO: better error handling
         return;
-    }
 
-    // Create a temporary matrix to store the augmented matrix
-    matrix_t *augmented = new_matrix(a->rows, 2 * a->cols);
+    int n = a->rows;
+    matrix_t *augmented = new_matrix(n, 2 * n);
 
-    // Copy the original matrix into the left half of the augmented matrix
-    for (int i = 0; i < a->rows; i++)
-    {
-        for (int j = 0; j < a->cols; j++)
-        {
+    // Copy a into left half, identity into right half
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++)
             augmented->vals[i][j] = a->vals[i][j];
-        }
+        for (int j = n; j < 2 * n; j++)
+            augmented->vals[i][j] = (i == j - n) ? 1.0 : 0.0;
     }
 
-    // Fill the right half of the augmented matrix with the identity matrix
-    for (int i = 0; i < a->rows; i++)
-    {
-        for (int j = a->cols; j < 2 * a->cols; j++)
-        {
-            augmented->vals[i][j] = (i == j - a->cols) ? 1 : 0;
+    // Gaussian elimination with partial pivoting
+    for (int i = 0; i < n; i++) {
+        // Find pivot row
+        int max_row = i;
+        double max_val = fabs(augmented->vals[i][i]);
+        for (int k = i + 1; k < n; k++) {
+            if (fabs(augmented->vals[k][i]) > max_val) {
+                max_val = fabs(augmented->vals[k][i]);
+                max_row = k;
+            }
         }
-    }
-
-    // Perform row operations to transform the left half of the augmented matrix into the identity matrix
-    for (int i = 0; i < a->rows; i++)
-    {
+        if (max_val < 1e-12) { // Singular matrix
+            goto done;
+        }
+        // Swap rows if needed
+        if (max_row != i) {
+            double *tmp = augmented->vals[i];
+            augmented->vals[i] = augmented->vals[max_row];
+            augmented->vals[max_row] = tmp;
+        }
+        // Normalize pivot row
         double pivot = augmented->vals[i][i];
-        if (pivot == 0)
-        {
-            // TODO: better error handling
-            free_matrix(augmented);
-            return;
-        }
-
-        // Divide the row by the pivot to make the diagonal element 1
-        for (int j = 0; j < 2 * a->cols; j++)
-        {
+        for (int j = 0; j < 2 * n; j++)
             augmented->vals[i][j] /= pivot;
-        }
-
-        // Subtract multiples of the row from the other rows to make the rest of the column zero
-        for (int k = 0; k < a->rows; k++)
-        {
-            if (k == i)
-            {
-                continue;
-            }
-
+        // Eliminate other rows
+        for (int k = 0; k < n; k++) {
+            if (k == i) continue;
             double factor = augmented->vals[k][i];
-            for (int j = 0; j < 2 * a->cols; j++)
-            {
+            for (int j = 0; j < 2 * n; j++)
                 augmented->vals[k][j] -= factor * augmented->vals[i][j];
-            }
         }
     }
 
-    // Copy the right half of the augmented matrix into the result matrix
-    for (int i = 0; i < a->rows; i++)
-    {
-        for (int j = 0; j < a->cols; j++)
-        {
-            res->vals[i][j] = augmented->vals[i][j + a->cols];
-        }
-    }
+    // Copy right half to result
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < n; j++)
+            res->vals[i][j] = augmented->vals[i][j + n];
+
+done:
+    free_matrix(augmented);
 }
 
 /* Print 1-D Array */
@@ -520,4 +527,13 @@ void fill_matrix(matrix_t *m, double val)
             m->vals[i][j] = val;
         }
     }
+}
+
+
+double matrix_frobenius_norm(matrix_t *m) {
+    double sum = 0.0;
+    for (int i = 0; i < m->rows; i++)
+        for (int j = 0; j < m->cols; j++)
+            sum += m->vals[i][j] * m->vals[i][j];
+    return sqrt(sum);
 }

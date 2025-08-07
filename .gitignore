@@ -64,5 +64,11 @@ dkms.conf
 .cache
 
 #ignore large tensor files
-MTTKRP_test/enron/*
-MTTKRP_test/nell_2/*
+tensors
+
+#ignore large verify_mttkrp files
+verify_mttkrp/enron*
+verify_mttkrp/nell-2*
+
+#ignore benchmarking logs
+benchmarking_logs

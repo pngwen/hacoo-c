@@ -14,6 +14,7 @@ matrix([[1, 2],
 typedef struct matrix {
   unsigned int rows;
   unsigned int cols;
+  double *data; // pointer to the actual data elements
   double **vals;
 } matrix_t;
 
@@ -29,6 +30,9 @@ matrix_t *array_to_matrix(double *data, unsigned int n_rows, unsigned int n_cols
 /* Copy contents of one matrix to a newly allocated matrix */
 matrix_t *copy_matrix(matrix_t *m);
 
+/* Copy matrix in place. */
+void copy_matrix_to(matrix_t *dest, matrix_t *src);
+
 /* Copy multiple matrices to newly allocated matrices */
 matrix_t** copy_matrices(matrix_t **originals, size_t num_matrices);
 
@@ -38,7 +42,7 @@ void print_matrix(matrix_t *m);
 void print_matrices(matrix_t **matrices, int num_matrices);
 
 /* free matrix */
-matrix_t *free_matrix(matrix_t *m);
+void free_matrix(matrix_t *m);
 
 /* Read matrix from text file */
 matrix_t *matrix_read_init();
@@ -91,5 +95,7 @@ void print_array(void *arr, int size, char type);
 void locate_zeroes(double *arr, int size);
 
 void print_matrix_column(matrix_t *matrix, int col_index);
+
+double matrix_frobenius_norm(matrix_t *m);
 
 #endif
