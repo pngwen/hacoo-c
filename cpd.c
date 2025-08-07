@@ -3,7 +3,7 @@
 #include "matrix.h"
 #include "mttkrp.h"
 
-#define GRAMREG 1e-6
+#define GRAMREG 1e-8
 
 void add_diagonal(matrix_t *matrix, double value) {
     for (unsigned int i = 0; i < matrix->rows && i < matrix->cols; i++) {
