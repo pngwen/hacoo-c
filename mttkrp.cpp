@@ -38,6 +38,7 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
     {
         int tid = omp_get_thread_num();
         int nthreads = omp_get_num_threads();
+        int nnz_counter = 0;
 
         //if (tid == 0) {
             //printf("Number of threads: %d\n", nthreads);
@@ -50,8 +51,8 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
         int start = tid * chunk;
         int end = (start + chunk > h->nbuckets) ? h->nbuckets : start + chunk;
 
-        unsigned int *idx = (unsigned int *) MALLOC(h->ndims * sizeof(unsigned int));
-        double *rank_vec = (double *) MALLOC(fmax * sizeof(double));
+        unsigned int *idx = (unsigned int *) malloc(h->ndims * sizeof(unsigned int));
+        double *rank_vec = (double *) malloc(fmax * sizeof(double));
 
         // Loop over assigned bucket vectors
         for (int i = start; i < end; i++) {
@@ -60,6 +61,7 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
                 continue;
 
             for (size_t j = 0; j < vec->size; j++) {
+                nnz_counter++;
                 struct hacoo_bucket *cur = &vec->data[j];
 
                 // Get full index array from compressed HaCOO format
@@ -84,26 +86,15 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
             }
         }
 
-        FREE(rank_vec); // Free thread-local buffer
-        FREE(idx);
+        free(rank_vec); // Free thread-local buffer
+        free(idx);
+        printf("I am thread %d and touched %d non-zeroes.\n",tid, nnz_counter);
     }
 
     /* Time merge step */
     double t_start = omp_get_wtime();
 
     // Merge all thread-local results into the global result
-    /* Hybrid */
-    /*#pragma omp parallel for
-    for (int i = 0; i < h->dims[n]; i++) {
-        for (int f = 0; f < fmax; f++) {
-            double sum = 0.0;
-            for (int t = 0; t < num_threads; t++) {
-                sum += partials[t]->vals[i][f];
-            }
-            res->vals[i][f] = sum;
-        }
-    }*/
-
     /* Parallel over threads */
     #pragma omp parallel
     {
@@ -121,18 +112,8 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
         }
     }
 
-    /*for collapse ver */
-    /*pragma omp parallel for collapse(2)
-    for (int i = 0; i < h->dims[n]; i++) {
-        for (int f = 0; f < fmax; f++) {
-            for (int t = 0; t < num_threads; t++) {
-                res->vals[i][f] += partials[t]->vals[i][f];
-            }
-        }
-    }*/
-
     double t_end = omp_get_wtime();
-    printf("Merge time: %.6f seconds\n", t_end - t_start);
+    //printf("Merge time: %.6f seconds\n", t_end - t_start);
 
     for (int t = 0; t < num_threads; t++) {
         free_matrix(partials[t]);

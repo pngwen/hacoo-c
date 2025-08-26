@@ -1,10 +1,10 @@
 #!/bin/bash
 
-tensor="uber"
+tensor="test1"
 tensor_file="$HOME/haccoo-c/tensors/${tensor}.tns"
 binary="$HOME/haccoo-c/hacoo_mttkrp"
 rank=10
-num_iterations=3
+num_iterations=1
 
 # Create timestamped log directory
 timestamp=$(date +%Y%m%d_%H%M%S)

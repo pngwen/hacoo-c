@@ -78,6 +78,8 @@
   #define FREE(ptr)    free(ptr)
 #endif
 
+using LIT = unsigned int; //to hold packed coordinates
+
 #define ROW 1
 
 typedef enum Model_ { ALS, APR } Model;

@@ -63,8 +63,16 @@ dkms.conf
 .breakpoints
 .cache
 
+#ignore debugging directory
+debugging
+
 #ignore large tensor files
-tensors
+tensors/chicago.tns
+tensors/uber.tns
+tensors/enron.tns
+tensors/lbnl.tns
+tensors/nips.tns
+tensors/nell-2.tns
 
 #ignore large verify_mttkrp files
 verify_mttkrp/enron*

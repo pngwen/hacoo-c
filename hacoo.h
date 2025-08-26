@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "vector.h"
+#include "common.hpp"
 
 struct hacoo_bucket {
   unsigned long long morton;
@@ -27,6 +28,8 @@ struct hacoo_tensor {
   unsigned int sy;
   unsigned int sz;
   //unsigned int base; //index base
+  LIT alto_mask;
+  LIT *mode_masks;            // gather/scatter masks (nmode)
 };
 
 /* Allocation and deallocation functions */

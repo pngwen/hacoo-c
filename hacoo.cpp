@@ -2,12 +2,16 @@
  * Purpose: Implementation of the hacoo sparse tensor library.
  */
 #include "hacoo.h"
+#include "alto.h"
 #include "common.hpp"
+#include "bitops.hpp"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <inttypes.h>
+#include <immintrin.h>
 
 #define LOAD 70
 #define MIN_BUCKETS 128
@@ -58,6 +62,10 @@ struct hacoo_tensor *hacoo_alloc(unsigned int ndims, unsigned int *dims,
   }
 
   hacoo_compute_params(t);
+
+  //setup alto encoding
+  alto_setup(t, LSB_FIRST, SHORT_FIRST);
+  
   return t;
 
 error:
@@ -380,7 +388,7 @@ struct hacoo_tensor *file_init(FILE *file) {
 void file_entry(struct hacoo_tensor *t, FILE *file) {
 
   double value;
-  unsigned int *index = (unsigned int *) MALLOC(t->ndims * sizeof(unsigned int));
+  unsigned int *index = (unsigned int *) malloc(t->ndims * sizeof(unsigned int));
   if (!index) {
     fprintf(stderr, "Error: Failed to allocate memory for index array.\n");
     return;
@@ -414,15 +422,9 @@ void file_entry_with_base(struct hacoo_tensor *t, FILE *file, int zero_base) {
 
   /* read the index */
   for (int i = 0; i < t->ndims; i++) {
-    if (feof(file)) {
-      free(index);
+    if (feof(file))
       return;
-    }
-    if (fscanf(file, "%d", &index[i]) != 1) {
-      fprintf(stderr, "Error: Failed to read index %d\n", i);
-      free(index);
-      return;
-    }
+    fscanf(file, "%u", &index[i]);
   }
 
   /*if indexes are one-based, like FROSTT tensors, subtract 1*/
@@ -471,12 +473,16 @@ void file_entry_with_base(struct hacoo_tensor *t, FILE *file, int zero_base) {
 /* Print out information about the tensor */
 void print_status(struct hacoo_tensor *t) {
   printf("nnz: %d nbuckets: %d\n", t->nnz, t->nbuckets);
+  printf("alto mask: %"PRIu64" \n",t->alto_mask);
 }
 
 /* Print the tensor hash table with COO listings */
 void print_tensor(struct hacoo_tensor *t)
 {
   unsigned int index[t->ndims];
+
+  //testing alto endoding
+  IType coords[t->ndims];
 
   for (size_t i = 0; i < t->nbuckets; i++) {
     bucket_vector *vec = &t->buckets[i];
@@ -488,10 +494,20 @@ void print_tensor(struct hacoo_tensor *t)
 
     for (size_t j = 0; j < vec->size; j++) {
       struct hacoo_bucket *b = &vec->data[j];
+
+
       hacoo_extract_index(b, t->ndims, index);
       printf("0x%llx: ", b->morton);
+      
       for (unsigned int k = 0; k < t->ndims; k++) {
         printf("%u ", index[k]);
+        
+        //print unpacked ALTO index
+        LIT const alto_idx = index[k];
+        coords[k] = pext(alto_idx, t->mode_masks[k]);
+        printf(" %d ",coords[k]);
+        printf("\n");
+        //
       }
       printf("%f\n", b->value);
     }
