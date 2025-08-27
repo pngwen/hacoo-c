@@ -17,7 +17,7 @@ Returns:
 #include "mttkrp.h"
 #include "hacoo.h"
 #include "matrix.h"
-#include "common.hpp"
+#include "common.cpp"
 #include <omp.h>
 #include <stdio.h>
 #include <cblas.h>

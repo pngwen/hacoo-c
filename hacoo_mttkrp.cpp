@@ -8,7 +8,7 @@
 #include "hacoo.h"
 #include "matrix.h"
 #include "mttkrp.h"
-#include "common.hpp"
+#include "common.cpp"
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 

@@ -29,12 +29,11 @@ int main(int argc, char *argv[]) {
     fclose(file);
   
     // Print tensor status
-    print_status(t);
+    //print_status(t);
 
     // Print tensor
     print_tensor(t);
 
-  
     // Free tensor
     hacoo_free(t);
 

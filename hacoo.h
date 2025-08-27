@@ -8,10 +8,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "vector.h"
-#include "common.hpp"
+#include "common.cpp"
 
 struct hacoo_bucket {
   unsigned long long morton;
+  LIT alto_idx;  // packed ALTO encoding
   double value;
 };
 
@@ -30,6 +31,9 @@ struct hacoo_tensor {
   //unsigned int base; //index base
   LIT alto_mask;
   LIT *mode_masks;            // gather/scatter masks (nmode)
+  #ifdef ALT_PEXT
+    int *mode_pos;              // starting point for each mode mask (nmode)
+  #endif
 };
 
 /* Allocation and deallocation functions */
@@ -77,6 +81,11 @@ void print_status(struct hacoo_tensor *t);
 
 /* Print the tensor hash table with COO listings */
 void print_tensor(struct hacoo_tensor *t);
+
+
+// Print a single bucket of ALTO indices
+void print_bucket_alto(const unsigned int* bucket_alto_idx, int bucket_size,
+                       const unsigned int* masks, int nmode);
 
 /* Print the contents of a specific bucket in the tensor */
 //void print_bucket(struct hacoo_tensor *t, int bucket_index);

@@ -3,8 +3,8 @@
  */
 #include "hacoo.h"
 #include "alto.h"
-#include "common.hpp"
-#include "bitops.hpp"
+#include "common.cpp"
+#include "bitops.cpp"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,6 +63,10 @@ struct hacoo_tensor *hacoo_alloc(unsigned int ndims, unsigned int *dims,
 
   hacoo_compute_params(t);
 
+  //allocate mode masks
+  t->mode_masks = (LIT*)calloc(t->ndims, sizeof(LIT));
+  assert(t->mode_masks);
+  
   //setup alto encoding
   alto_setup(t, LSB_FIRST, SHORT_FIRST);
   
@@ -93,6 +97,10 @@ void hacoo_free(struct hacoo_tensor *t)
 /* Access functions */
 void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value)
 {
+
+  //delete this later
+  unsigned int* indices = (unsigned int*)malloc(t->ndims* sizeof(unsigned int));
+
   unsigned long long morton = hacoo_morton(t->ndims, index);
   size_t i = hacoo_bucket_index(t, morton);
 
@@ -104,6 +112,12 @@ void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value)
   // If not found, insert new bucket
   if (!b) {
     struct hacoo_bucket new_bucket;
+    new_bucket.alto_idx = alto_pack_index(index, t->mode_masks, t->ndims);
+    //printf("alto idx = ");
+    //alto_unpack(new_bucket.alto_idx, t->nnz, t->mode_masks, t->ndims, &indices);
+
+    //print_bucket_alto();
+
     new_bucket.morton = morton;
     new_bucket.value = value;
 
@@ -111,6 +125,8 @@ void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value)
     t->nnz++; // Increment number of nonzeros
     return;
   }
+
+  free(indices);
 
   // If found, update value
   b->value = value;
@@ -476,42 +492,45 @@ void print_status(struct hacoo_tensor *t) {
   printf("alto mask: %"PRIu64" \n",t->alto_mask);
 }
 
-/* Print the tensor hash table with COO listings */
 void print_tensor(struct hacoo_tensor *t)
 {
-  unsigned int index[t->ndims];
+    unsigned int index[t->ndims];       // for COO indices
+    unsigned int coords[t->ndims];      // for unpacked ALTO indices
 
-  //testing alto endoding
-  IType coords[t->ndims];
+    for (size_t i = 0; i < t->nbuckets; i++) {
+        bucket_vector *vec = &t->buckets[i];
+        if (vec->size == 0) continue;
 
-  for (size_t i = 0; i < t->nbuckets; i++) {
-    bucket_vector *vec = &t->buckets[i];
+        printf("\nBucket %zu\n=============\n", i);
 
-    if (vec->size == 0)
-      continue;
+        for (size_t j = 0; j < vec->size; j++) {
+            struct hacoo_bucket *b = &vec->data[j];
 
-    printf("\nBucket %zu\n=============\n", i);
+            // extract COO-style index
+            hacoo_extract_index(b, t->ndims, index);
 
-    for (size_t j = 0; j < vec->size; j++) {
-      struct hacoo_bucket *b = &vec->data[j];
+            // unpack ALTO index
+            alto_unpack(b->alto_idx, t->mode_masks, t->ndims, coords);
 
+            printf("0x%llx: ", b->morton);
 
-      hacoo_extract_index(b, t->ndims, index);
-      printf("0x%llx: ", b->morton);
-      
-      for (unsigned int k = 0; k < t->ndims; k++) {
-        printf("%u ", index[k]);
-        
-        //print unpacked ALTO index
-        LIT const alto_idx = index[k];
-        coords[k] = pext(alto_idx, t->mode_masks[k]);
-        printf(" %d ",coords[k]);
-        printf("\n");
-        //
-      }
-      printf("%f\n", b->value);
+            printf("COO indices: ");
+            // print COO indices
+            for (unsigned int k = 0; k < t->ndims; k++) {
+                printf("%u ", index[k]);
+            }
+            printf("\n");
+
+            printf("Unpacked ALTO indices: ");
+            // print ALTO unpacked indices
+            for (unsigned int k = 0; k < t->ndims; k++) {
+                printf("%u ", coords[k]);
+            }
+            printf("\n");
+
+            printf("%f\n", b->value);
+        }
     }
-  }
 }
 
 /* Calculate the frobenius norm of the tensor */

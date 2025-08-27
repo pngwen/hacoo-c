@@ -1,7 +1,7 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#include "common.hpp"  // brings in MALLOC / FREE / alignment helpers
+#include "common.cpp"  // brings in MALLOC / FREE / alignment helpers
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>

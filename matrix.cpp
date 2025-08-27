@@ -1,5 +1,5 @@
 #include "matrix.h"
-#include "common.hpp" //for aligned malloc
+#include "common.cpp" //for aligned malloc
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>

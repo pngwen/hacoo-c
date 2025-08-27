@@ -5,11 +5,19 @@
 #include <immintrin.h>
 #endif
 
-
 #ifndef ALT_PEXT
 static inline unsigned long long //__attribute__((target("bmi2")))
 pdep(unsigned long long x, unsigned long long y)
 { return _pdep_u64(x, y); }
+
+static inline uint64_t //__attribute__((target("bmi2")))
+pdep(uint64_t x, uint64_t y)
+{ return _pdep_u64(x, y); }
+
+
+static inline uint64_t //__attribute__((target("bmi2")))
+pext(uint64_t x, uint64_t y)
+{ return _pext_u64(x, y); }
 
 static inline unsigned long long //__attribute__((target("bmi2")))
 pext(unsigned long long x, unsigned long long y)
@@ -53,10 +61,14 @@ static inline int
 popcount(unsigned long long x)
 { return __builtin_popcountll(x); }
 
-/*
+static inline int
+clz(uint64_t x)
+{ return __builtin_clzll(x); }
+
 static inline int
 clz(unsigned long long x)
-{ return __builtin_clzll(x); } */
+{ return __builtin_clzll(x); }
+
 
 #ifndef ALT_PEXT
 static inline unsigned __int128 //__attribute__((target("bmi2")))
@@ -70,7 +82,7 @@ pdep(IType x, unsigned __int128 y)
   return res;
 }
 
-/*inline IType //__attribute__((target("bmi2")))
+static inline IType //__attribute__((target("bmi2")))
 pext(unsigned __int128 x, unsigned __int128 y)
 {
   unsigned long long ylow = y & 0xffffffffffffffff;
@@ -78,7 +90,7 @@ pext(unsigned __int128 x, unsigned __int128 y)
 
   int shift = __builtin_popcountll(ylow);
   return (_pext_u64(x >> 64, y >> 64) << shift) | _pext_u64(xlow, ylow);
-}*/
+}
 #else
 static inline unsigned __int128 //__attribute__((target("default")))
 pdep(IType x, unsigned __int128 y)
