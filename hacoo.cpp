@@ -113,11 +113,6 @@ void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value)
   if (!b) {
     struct hacoo_bucket new_bucket;
     new_bucket.alto_idx = alto_pack_index(index, t->mode_masks, t->ndims);
-    //printf("alto idx = ");
-    //alto_unpack(new_bucket.alto_idx, t->nnz, t->mode_masks, t->ndims, &indices);
-
-    //print_bucket_alto();
-
     new_bucket.morton = morton;
     new_bucket.value = value;
 
@@ -489,7 +484,6 @@ void file_entry_with_base(struct hacoo_tensor *t, FILE *file, int zero_base) {
 /* Print out information about the tensor */
 void print_status(struct hacoo_tensor *t) {
   printf("nnz: %d nbuckets: %d\n", t->nnz, t->nbuckets);
-  printf("alto mask: %"PRIu64" \n",t->alto_mask);
 }
 
 void print_tensor(struct hacoo_tensor *t)

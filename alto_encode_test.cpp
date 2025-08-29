@@ -17,15 +17,22 @@ int main(int argc, char *argv[]) {
     omp_set_num_threads(omp_get_max_threads()); 
     openblas_set_num_threads(omp_get_max_threads()); 
 
+    if (argc != 3) {
+      printf("Usage: ./alto_encode_test <tensor_file> <index_base> (0 or 1)\n");
+      return;
+    }
+
     FILE *file = fopen(argv[1], "r");
-  
+
     if (!file) {
       perror("Error opening file");
       return;
     }
+
+    int tensor_base = atoi(argv[2]);
   
     // Read the tensor
-    struct hacoo_tensor *t = read_tensor_file(file);
+    struct hacoo_tensor *t = read_tensor_file_with_base(file,tensor_base);
     fclose(file);
   
     // Print tensor status

@@ -82,11 +82,6 @@ void print_status(struct hacoo_tensor *t);
 /* Print the tensor hash table with COO listings */
 void print_tensor(struct hacoo_tensor *t);
 
-
-// Print a single bucket of ALTO indices
-void print_bucket_alto(const unsigned int* bucket_alto_idx, int bucket_size,
-                       const unsigned int* masks, int nmode);
-
 /* Print the contents of a specific bucket in the tensor */
 //void print_bucket(struct hacoo_tensor *t, int bucket_index);
 //void print_bucket_from_ptr(struct hacoo_bucket *b, unsigned int ndims);
