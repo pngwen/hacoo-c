@@ -14,11 +14,11 @@ int main(int argc, char *argv[]) {
     setvbuf(stdout, NULL, _IONBF, 0); // disable stdout buffering
     setvbuf(stderr, NULL, _IONBF, 0); // disable stderr buffering
 
-    omp_set_num_threads(omp_get_max_threads()); 
-    openblas_set_num_threads(omp_get_max_threads()); 
+    omp_set_num_threads(omp_get_max_threads());
+    openblas_set_num_threads(omp_get_max_threads());
 
     if (argc != 3) {
-      printf("Usage: ./alto_encode_test <tensor_file> <index_base> (0 or 1)\n");
+      printf("Usage: ./alto_encode_test <tensor_file> <index_base> (1 if it's zero based)\n");
       return;
     }
 

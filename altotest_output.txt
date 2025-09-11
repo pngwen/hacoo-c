@@ -1,0 +1,97 @@
+nmode: 3
+num_bits for mode-1=2
+num_bits for mode-2=3
+num_bits for mode-3=1
+Ordinal Type:        int64
+Sparse Value Type:   FP64
+alto_bits_min=6, alto_bits_max=9
+Alto format storage:    0 Bytes
+Alto-opt format storage:    0 Bytes
+ALTO_MASKS[0] = 0xa
+ALTO_MASKS[1] = 0x34
+ALTO_MASKS[2] = 0x1
+alto_mask = 0x3f
+coords[0] = 1, ALTO_MASKS[0] = 0xa, partial = 0x2
+coords[1] = 0, ALTO_MASKS[1] = 0x34, partial = 0x0
+coords[2] = 0, ALTO_MASKS[2] = 0x1, partial = 0x0
+Packed index = 0x2
+coords[0] = 3, ALTO_MASKS[0] = 0xa, partial = 0xa
+coords[1] = 1, ALTO_MASKS[1] = 0x34, partial = 0x4
+coords[2] = 1, ALTO_MASKS[2] = 0x1, partial = 0x1
+Packed index = 0xf
+coords[0] = 0, ALTO_MASKS[0] = 0xa, partial = 0x0
+coords[1] = 3, ALTO_MASKS[1] = 0x34, partial = 0x14
+coords[2] = 0, ALTO_MASKS[2] = 0x1, partial = 0x0
+Packed index = 0x14
+coords[0] = 2, ALTO_MASKS[0] = 0xa, partial = 0x8
+coords[1] = 2, ALTO_MASKS[1] = 0x34, partial = 0x10
+coords[2] = 1, ALTO_MASKS[2] = 0x1, partial = 0x1
+Packed index = 0x19
+coords[0] = 3, ALTO_MASKS[0] = 0xa, partial = 0xa
+coords[1] = 4, ALTO_MASKS[1] = 0x34, partial = 0x20
+coords[2] = 0, ALTO_MASKS[2] = 0x1, partial = 0x0
+Packed index = 0x2a
+coords[0] = 1, ALTO_MASKS[0] = 0xa, partial = 0x2
+coords[1] = 6, ALTO_MASKS[1] = 0x34, partial = 0x30
+coords[2] = 1, ALTO_MASKS[2] = 0x1, partial = 0x1
+Packed index = 0x33
+
+Bucket 23
+=============
+Unpacking index = 0xf
+mask[0] = 0xa, extracted = 0x3, out_indices[0] = 3
+mask[1] = 0x34, extracted = 0x1, out_indices[1] = 1
+mask[2] = 0x1, extracted = 0x1, out_indices[2] = 1
+0xf: COO indices: 3 1 1 
+Unpacked ALTO indices: 3 1 1 
+2.000000
+
+Bucket 25
+=============
+Unpacking index = 0x2
+mask[0] = 0xa, extracted = 0x1, out_indices[0] = 1
+mask[1] = 0x34, extracted = 0x0, out_indices[1] = 0
+mask[2] = 0x1, extracted = 0x0, out_indices[2] = 0
+0x1: COO indices: 1 0 0 
+Unpacked ALTO indices: 1 0 0 
+1.000000
+
+Bucket 34
+=============
+Unpacking index = 0x14
+mask[0] = 0xa, extracted = 0x0, out_indices[0] = 0
+mask[1] = 0x34, extracted = 0x3, out_indices[1] = 3
+mask[2] = 0x1, extracted = 0x0, out_indices[2] = 0
+0x12: COO indices: 0 3 0 
+Unpacked ALTO indices: 0 3 0 
+3.000000
+
+Bucket 45
+=============
+Unpacking index = 0x33
+mask[0] = 0xa, extracted = 0x1, out_indices[0] = 1
+mask[1] = 0x34, extracted = 0x6, out_indices[1] = 6
+mask[2] = 0x1, extracted = 0x1, out_indices[2] = 1
+0x95: COO indices: 1 6 1 
+Unpacked ALTO indices: 1 6 1 
+6.000000
+
+Bucket 97
+=============
+Unpacking index = 0x2a
+mask[0] = 0xa, extracted = 0x3, out_indices[0] = 3
+mask[1] = 0x34, extracted = 0x4, out_indices[1] = 4
+mask[2] = 0x1, extracted = 0x0, out_indices[2] = 0
+0x89: COO indices: 3 4 0 
+Unpacked ALTO indices: 3 4 0 
+5.000000
+
+Bucket 124
+=============
+Unpacking index = 0x19
+mask[0] = 0xa, extracted = 0x2, out_indices[0] = 2
+mask[1] = 0x34, extracted = 0x2, out_indices[1] = 2
+mask[2] = 0x1, extracted = 0x1, out_indices[2] = 1
+0x1c: COO indices: 2 2 1 
+Unpacked ALTO indices: 2 2 1 
+4.000000

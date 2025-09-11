@@ -98,9 +98,6 @@ void hacoo_free(struct hacoo_tensor *t)
 void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value)
 {
 
-  //delete this later
-  unsigned int* indices = (unsigned int*)malloc(t->ndims* sizeof(unsigned int));
-
   unsigned long long morton = hacoo_morton(t->ndims, index);
   size_t i = hacoo_bucket_index(t, morton);
 
@@ -120,8 +117,6 @@ void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value)
     t->nnz++; // Increment number of nonzeros
     return;
   }
-
-  free(indices);
 
   // If found, update value
   b->value = value;
@@ -440,6 +435,7 @@ void file_entry_with_base(struct hacoo_tensor *t, FILE *file, int zero_base) {
 
   /*if indexes are one-based, like FROSTT tensors, subtract 1*/
   if (!zero_base) {
+    
     for (int i = 0; i < t->ndims; i++) {
       if (index[i] == 0) {
         fprintf(stderr, "Error: Tensor uses base-1 indexing but has index 0 in mode %d\n", i);
