@@ -16,14 +16,6 @@ LIT alto_pack_index(const unsigned int *coords,
         LIT partial = pdep(static_cast<uint64_t>(coords[i]),
                            static_cast<uint64_t>(ALTO_MASKS[i]));
         alto |= partial;
-
-        // Print the original coordinate and its contribution
-        /*printf("coords[%d] = %u, ALTO_MASKS[%d] = 0x%llx, partial = 0x%llx\n",
-               i,
-               coords[i],
-               i,
-               (unsigned long long) ALTO_MASKS[i],
-               (unsigned long long) partial);*/
     }
 
     // Print the final packed index
@@ -32,39 +24,17 @@ LIT alto_pack_index(const unsigned int *coords,
     return alto;
 }
 
-/*
-LIT alto_pack_index(const unsigned int *coords,
-                           const LIT *ALTO_MASKS,
-                           int nmode) {
-    LIT alto = 0;
-    for (int i = 0; i < nmode; i++) {
-        alto |= pdep(static_cast<uint64_t>(coords[i]), static_cast<uint64_t>(ALTO_MASKS[i]));
-    }
-    printf("LTO_MASKS[%d]A = 0x%llx\n", n, ALTO_MASKS[n]);
-    return alto;
-}*/
-
 // Unpack ALTO indices
-void alto_unpack(LIT alto_idx,
-                 const LIT* masks,
+void alto_unpack(unsigned long long alto_idx,
+                 const unsigned long long* masks,
                  int ndims,
-                 unsigned int* out_indices) {
+                 unsigned int* out_indices)
+{
     assert(masks && out_indices);
 
-    //printf("Unpacking index = 0x%llx\n", (unsigned long long) alto_idx);
-
     for (int m = 0; m < ndims; ++m) {
-        LIT extracted = pext(static_cast<uint64_t>(alto_idx),
-                             static_cast<uint64_t>(masks[m]));
+        unsigned long long extracted = pext(alto_idx, masks[m]);
         out_indices[m] = static_cast<unsigned int>(extracted);
-
-        // Debug print
-        /*printf("mask[%d] = 0x%llx, extracted = 0x%llx, out_indices[%d] = %u\n",
-               m,
-               (unsigned long long) masks[m],
-               (unsigned long long) extracted,
-               m,
-               out_indices[m]);*/
     }
 }
 
@@ -113,21 +83,6 @@ void alto_setup(struct hacoo_tensor *at, PackOrder po, ModeOrder mo)
     printf("alto_bits_min=%d, alto_bits_max=%d\n", alto_bits_min, alto_bits_max);
     assert(alto_bits_min <= ((int)sizeof(LIT) * 8));
 
-    //Assuming we use a power-2 data type for ALTO_idx with a minimum size of a byte
-    //int alto_bits = pow(2, (sizeof(int) * 8) - __builtin_clz(alto_bits_min));
-    // int alto_bits = (int)0x1 << std::max<int>(3, (sizeof(int) * 8) - __builtin_clz(alto_bits_min));
-    // printf("alto_bits=%d\n", alto_bits);
-
-    double alto_storage = 0;
-    alto_storage = at->nnz * (sizeof(ValType) + sizeof(LIT));
-    printf("Alto format storage:    %g Bytes\n", alto_storage);
-
-    // alto_storage = at->nnz * (sizeof(ValType) + (alto_bits >> 3));
-    // printf("Alto-power-2 format storage:    %g Bytes\n", alto_storage);
-
-    alto_storage = at->nnz * (sizeof(ValType) + (alto_bits_min >> 3));
-    printf("Alto-opt format storage:    %g Bytes\n", alto_storage);
-
     {//Dilation & shifting.
         int level = 0, shift = 0, inc = 1;
 
@@ -163,22 +118,15 @@ void alto_setup(struct hacoo_tensor *at, PackOrder po, ModeOrder mo)
     for (int n = 0; n < nmode; ++n) {
         at->mode_masks[n] = ALTO_MASKS[n];
         alto_mask |= ALTO_MASKS[n];
-//#ifdef ALTO_DEBUG
+#ifdef ALTO_DEBUG
         printf("ALTO_MASKS[%d] = 0x%llx\n", n, ALTO_MASKS[n]);
-//#endif
+#endif
     }
     at->alto_mask = alto_mask;
-//#ifdef ALTO_DEBUG
+#ifdef ALTO_DEBUG
     printf("alto_mask = 0x%llx\n", alto_mask);
-//#endif
+#endif
 
-    /*printf("Final ALTO_MASKS (binary):\n");
-    for (int n = 0; n < nmode; ++n) {
-        printf("Mode %d mask = ", n, ALTO_MASKS[n]);
-        for (int b = sizeof(LIT)*8 - 1; b >= 0; --b)
-            printf("%d", (ALTO_MASKS[n] >> b) & 1);
-        printf("\n");
-    } */
     free(mode_bits);
     free(ALTO_MASKS);
 }

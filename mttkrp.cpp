@@ -15,6 +15,7 @@ Returns:
 */
 
 #include "mttkrp.h"
+#include "alto.h"
 #include "hacoo.h"
 #include "matrix.h"
 #include "common.cpp"
@@ -22,8 +23,7 @@ Returns:
 #include <stdio.h>
 #include <cblas.h>
 
-/* Parallel MTTKRP */
-matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
+/* Parallel MTTKRP */matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
 {
     unsigned int fmax = u[0]->cols;
 
@@ -65,7 +65,10 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
                 struct hacoo_bucket *cur = &vec->data[j];
 
                 // Get full index array from compressed HaCOO format
-                hacoo_extract_index(cur, h->ndims, idx);
+                //hacoo_extract_index(cur, h->ndims, idx);
+
+                // Get full index array from compressed ALTO format
+                alto_unpack(cur->alto_idx, h->mode_masks, h->ndims, idx);
 
                 // Initialize rank vector with cur->value
                 for (int f = 0; f < fmax; f++) {
@@ -88,11 +91,7 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
 
         free(rank_vec); // Free thread-local buffer
         free(idx);
-        printf("I am thread %d and touched %d non-zeroes.\n",tid, nnz_counter);
     }
-
-    /* Time merge step */
-    double t_start = omp_get_wtime();
 
     // Merge all thread-local results into the global result
     /* Parallel over threads */
@@ -111,9 +110,6 @@ matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
             }
         }
     }
-
-    double t_end = omp_get_wtime();
-    //printf("Merge time: %.6f seconds\n", t_end - t_start);
 
     for (int t = 0; t < num_threads; t++) {
         free_matrix(partials[t]);

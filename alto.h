@@ -23,6 +23,8 @@ void alto_setup(struct hacoo_tensor *at, PackOrder po, ModeOrder mo);
 LIT alto_pack_index(const unsigned int *coords, const LIT *ALTO_MASKS, int nmode);
 
 /* Unpack index */
-void alto_unpack(unsigned int alto_idx, const unsigned int* masks, int ndims, unsigned int* out_indices);
-
+void alto_unpack(unsigned long long alto_idx,
+                 const unsigned long long* masks,
+                 int ndims,
+                 unsigned int* out_indices);
 #endif
