@@ -182,3 +182,20 @@ void alto_setup(struct hacoo_tensor *at, PackOrder po, ModeOrder mo)
     free(mode_bits);
     free(ALTO_MASKS);
 }
+
+/* set up for for morton linearization */
+void morton_setup(struct hacoo_tensor *at)
+{
+    at->mode_masks = (LIT*)calloc(at->ndims, sizeof(LIT));
+    at->alto_mask = 0;
+    
+    for(int i=0; i<at->ndims; i++) {
+        at->mode_masks[i]=0;
+        unsigned int idx=at->dims[i];
+        while(idx) {
+            at->mode_masks[i] = (at->mode_masks[i] << at->ndims) | 1;
+            idx >>= 1;
+        }
+        alto_mask |= at->mode_masks[i];
+    }
+}

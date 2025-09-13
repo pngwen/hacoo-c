@@ -19,10 +19,14 @@ struct MPair {
 /* Set up linearization scheme*/
 void alto_setup(struct hacoo_tensor *at, PackOrder po, ModeOrder mo);
 
+/* set up for for morton linearization */
+void morton_setup(struct hacoo_tensor *at);
+
 /* Pack index */
 LIT alto_pack_index(const unsigned int *coords, const LIT *ALTO_MASKS, int nmode);
 
 /* Unpack index */
 void alto_unpack(unsigned int alto_idx, const unsigned int* masks, int ndims, unsigned int* out_indices);
+
 
 #endif
