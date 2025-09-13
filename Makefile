@@ -29,5 +29,8 @@ matrix_op_test: matrix_op_test.o matrix.o
 alto_encode_test: alto_encode_test.o alto.o hacoo.o matrix.o cpd.o mttkrp.o
 	g++ $(CFLAGS) -o $@ $^ $(LDLIBS)
 
+hacoo_mttkrp: hacoo_mttkrp.o alto.o hacoo.o matrix.o cpd.o mttkrp.o
+	g++ $(CFLAGS) -o $@ $^ $(LDLIBS)
+
 clean:
 	rm -f main main-debug mttkrp_test *.o
