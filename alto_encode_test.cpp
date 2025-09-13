@@ -19,14 +19,14 @@ int main(int argc, char *argv[]) {
 
     if (argc != 3) {
       printf("Usage: ./alto_encode_test <tensor_file> <index_base> (1 if it's zero based)\n");
-      return;
+      return -1;
     }
 
     FILE *file = fopen(argv[1], "r");
 
     if (!file) {
       perror("Error opening file");
-      return;
+      return -1;
     }
 
     int tensor_base = atoi(argv[2]);

@@ -11,7 +11,6 @@
 #include "common.cpp"
 
 struct hacoo_bucket {
-  unsigned long long morton;
   LIT alto_idx;  // packed ALTO encoding
   double value;
 };
@@ -47,10 +46,6 @@ void hacoo_rehash(struct hacoo_tensor **t);
 /* Access functions */
 void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value);
 double hacoo_get(struct hacoo_tensor *t, unsigned int *index);
-
-/* extract the index from a bucket */
-void hacoo_extract_index(struct hacoo_bucket *b, unsigned int n,
-                         unsigned int *index);
 
 /* Allocate a new bucket */
 struct hacoo_bucket *hacoo_new_bucket();

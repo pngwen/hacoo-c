@@ -19,12 +19,11 @@
 /* Helper Function Prototypes */
 static void hacoo_free_buckets(struct hacoo_tensor *t);
 static void free_buckets(bucket_vector *buckets, size_t nbuckets);
-static uint64_t hacoo_morton(unsigned int n, unsigned int *index);
 static size_t hacoo_bucket_index(struct hacoo_tensor *t,
-                                 unsigned long long morton);
+                                 LIT packed);
 static void hacoo_compute_params(struct hacoo_tensor *t);
 static struct hacoo_bucket *hacoo_bucket_search(bucket_vector *vec,
-                                                unsigned long long morton);
+                                                LIT packed);
 static size_t hacoo_max_bits(unsigned int n);
 
 /* Allocation and deallocation functions */
@@ -98,19 +97,18 @@ void hacoo_free(struct hacoo_tensor *t)
 void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value)
 {
 
-  unsigned long long morton = hacoo_morton(t->ndims, index);
-  size_t i = hacoo_bucket_index(t, morton);
+  LIT alto_idx = alto_pack_index(index, t->mode_masks, t->ndims);
+  size_t i = hacoo_bucket_index(t, alto_idx);
 
   bucket_vector *vec = &t->buckets[i];
 
-  // Search for existing bucket with same morton code
-  struct hacoo_bucket *b = hacoo_bucket_search(vec, morton);
+  // Search for existing bucket with same packed index 
+  struct hacoo_bucket *b = hacoo_bucket_search(vec, alto_idx);
 
   // If not found, insert new bucket
   if (!b) {
     struct hacoo_bucket new_bucket;
-    new_bucket.alto_idx = alto_pack_index(index, t->mode_masks, t->ndims);
-    new_bucket.morton = morton;
+    new_bucket.alto_idx = alto_idx;
     new_bucket.value = value;
 
     bucket_vector_push_back(vec, new_bucket);
@@ -157,7 +155,7 @@ void hacoo_rehash(struct hacoo_tensor **t)
     bucket_vector *vec = &(*t)->buckets[i];
     for (size_t j = 0; j < vec->size; ++j) {
       struct hacoo_bucket *b = &vec->data[j];
-      hacoo_extract_index(b, (*t)->ndims, index);
+      alto_unpack(b->alto_idx, (*t)->mode_masks, (*t)->ndims, index);
       hacoo_set(dummy, index, b->value);
       nnz++;
     }
@@ -187,37 +185,18 @@ void hacoo_rehash(struct hacoo_tensor **t)
 
 double hacoo_get(struct hacoo_tensor *t, unsigned int *index)
 {
-  unsigned long long morton = hacoo_morton(t->ndims, index);
-  unsigned int i = hacoo_bucket_index(t, morton);
+  LIT alto_idx = alto_pack_index(index, t->mode_masks, t->ndims);
+  unsigned int i = hacoo_bucket_index(t, alto_idx);
   bucket_vector *vec = &t->buckets[i];
 
-  // Search for existing bucket with same morton code
-  struct hacoo_bucket *b = hacoo_bucket_search(vec, morton);
+  // Search for existing bucket with same alto code
+  struct hacoo_bucket *b = hacoo_bucket_search(vec, alto_idx);
   if (b)
   {
     return b->value;
   }
 
   return 0.0;
-}
-
-/* Extract the index from a bucket */
-void hacoo_extract_index(struct hacoo_bucket *b, unsigned int n,
-                         unsigned int *index)
-{
-    size_t max_bits = hacoo_max_bits(n);
-
-    // Initialize the index array
-    for (unsigned int i = 0; i < n; i++) {
-        index[i] = 0;
-    }
-
-    // De-interleave the Morton code bits into the index array
-    for (unsigned int bit = 0; bit < max_bits; bit++) {
-        for (unsigned int i = 0; i < n; i++) {
-            index[i] |= ((b->morton >> (bit * n + i)) & 1) << bit;
-        }
-    }
 }
 
 /* Helper function implementations. */
@@ -241,26 +220,11 @@ static void free_buckets(bucket_vector *buckets, size_t nbuckets)
   FREE(buckets);
 }
 
-// Encodes index, returns morton code
-// n: ndimensions
-static uint64_t hacoo_morton(unsigned int n, unsigned int *index)
-{
-    uint64_t m = 0;
-    size_t max_bits = hacoo_max_bits(n);
-
-    for (unsigned int bit = 0; bit < max_bits; bit++) {
-        for (unsigned int i = 0; i < n; i++) {
-            m |= ((uint64_t)((index[i] >> bit) & 1)) << (bit * n + i);
-        }
-    }
-
-    return m;
-}
 
 static size_t hacoo_bucket_index(struct hacoo_tensor *t,
-                                 unsigned long long morton)
+                                 LIT packed)
 {
-  unsigned long long hash = morton;
+  unsigned long long hash = (unsigned long long) packed;
 
   hash = hash + (hash << t->sx);
   hash = hash ^ (hash >> t->sy);
@@ -284,10 +248,10 @@ static void hacoo_compute_params(struct hacoo_tensor *t)
 
 
 static struct hacoo_bucket *hacoo_bucket_search(bucket_vector *vec,
-                                                unsigned long long morton)
+                                                LIT packed)
 {
   for (size_t i = 0; i < vec->size; i++) {
-    if (vec->data[i].morton == morton) {
+    if (vec->data[i].alto_idx == packed) {
       return &vec->data[i];
     }
   }
@@ -496,22 +460,12 @@ void print_tensor(struct hacoo_tensor *t)
         for (size_t j = 0; j < vec->size; j++) {
             struct hacoo_bucket *b = &vec->data[j];
 
-            // extract COO-style index
-            hacoo_extract_index(b, t->ndims, index);
-
             // unpack ALTO index
             alto_unpack(b->alto_idx, t->mode_masks, t->ndims, coords);
 
-            printf("0x%llx: ", b->morton);
+            printf("0x%llx: ", b->alto_idx);
 
             printf("COO indices: ");
-            // print COO indices
-            for (unsigned int k = 0; k < t->ndims; k++) {
-                printf("%u ", index[k]);
-            }
-            printf("\n");
-
-            printf("Unpacked ALTO indices: ");
             // print ALTO unpacked indices
             for (unsigned int k = 0; k < t->ndims; k++) {
                 printf("%u ", coords[k]);
