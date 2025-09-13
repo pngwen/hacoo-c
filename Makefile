@@ -20,6 +20,9 @@ mttkrp_test: hacoo.o mttkrp_test.o matrix.o mttkrp.o
 candecomp: candecomp.o hacoo.o matrix.o cpd.o mttkrp.o alto.o
 	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
+hacoo_test: hacoo_test.o hacoo.o matrix.o cpd.o mttkrp.o alto.o
+	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
+
 matrix_op_test: matrix_op_test.o matrix.o
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 

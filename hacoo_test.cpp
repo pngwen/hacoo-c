@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
   
     if (!file) {
       perror("Error opening file");
-      return;
+      return -1;
     }
   
     // Read the tensor
