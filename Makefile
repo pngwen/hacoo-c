@@ -14,6 +14,9 @@ main: $(SRCS) $(HEADERS)
 main-debug: $(SRCS) $(HEADERS)
 	$(CC) $(CFLAGS) -O0 $(SRCS) -o "$@" $(LDLIBS)
 
+mttkrp_test: hacoo.o mttkrp_test.o matrix.o mttkrp.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+
 candecomp: candecomp.o hacoo.o matrix.o cpd.o mttkrp.o alto.o
 	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
@@ -30,4 +33,4 @@ hacoo_mttkrp: hacoo_mttkrp.o alto.o hacoo.o matrix.o cpd.o mttkrp.o
 	g++ $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 clean:
-	rm -f main main-debug candecomp hacoo_test matrix_op_test hacoo_mttkrp alto_encode_test *.o
+	rm -f main main-debug mttkrp_test *.o
