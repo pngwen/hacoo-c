@@ -10,7 +10,8 @@
 #SBATCH --cpus-per-task=128
 
 # Tensors to run
-tensors=("uber" "chicago" "lbnl" "nips" "nell-2" "enron")
+tensors=("uber")
+#tensors=("uber" "chicago" "lbnl" "nips" "nell-2" "enron")
 
 # Path to benchmark script (must be executable and NOT include SBATCH headers)
 benchmark_script="$HOME/haccoo-c/scripts/hacoo_mttkrp_bench.sh"
