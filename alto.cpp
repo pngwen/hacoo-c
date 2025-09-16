@@ -25,15 +25,15 @@ LIT alto_pack_index(const unsigned int *coords,
 }
 
 // Unpack ALTO indices
-void alto_unpack(unsigned long long alto_idx,
-                 const unsigned long long* masks,
+void alto_unpack(LIT alto_idx,
+                 const LIT* masks,
                  int ndims,
                  unsigned int* out_indices)
 {
     assert(masks && out_indices);
 
     for (int m = 0; m < ndims; ++m) {
-        unsigned long long extracted = pext(alto_idx, masks[m]);
+        unsigned long long extracted = pext(static_cast<LIT>(alto_idx), masks[m]);
         out_indices[m] = static_cast<unsigned int>(extracted);
     }
 }
@@ -42,6 +42,7 @@ void alto_unpack(unsigned long long alto_idx,
 // Achieving alto_bits_min requires packing/compression.
 void alto_setup(struct hacoo_tensor *at, PackOrder po, ModeOrder mo)
 {
+    printf("here\n");
     LIT* ALTO_MASKS = (LIT*)calloc(at->ndims, sizeof(LIT));
     assert(ALTO_MASKS);
 

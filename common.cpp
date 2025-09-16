@@ -78,7 +78,8 @@
   #define FREE(ptr)    free(ptr)
 #endif
 
-using LIT = unsigned long long; //to hold packed coordinates
+//using LIT = unsigned long long; //to hold packed coordinates
+using LIT = __uint128_t;
 
 #define ROW 1
 
