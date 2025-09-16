@@ -12,22 +12,26 @@
 #include <fstream>
 #include <map>
 #include "tokenize.hpp"
-#include "../hacoo.h"
+#include "hacoo.h"
+#include "cpd.h"
+
+void write_tsv_matrix(const std::string &filename, matrix_t *m);
 
 int main(int argc, char **argv) 
 {
-    if(argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <ngram-size> <vocab_file> <doc_file>" << std::endl;
+    if(argc != 5) {
+        std::cerr << "Usage: " << argv[0] << " <ngram-size> <rank> <vocab_file> <doc_file>" << std::endl;
         return -1;
     }
 
     // Get ngram size
     int ngram_size = std::stoi(argv[1]);
+    int rank = std::stoi(argv[2]);
 
     // Load the vocabulary
-    std::ifstream vocab_ifs(argv[2]);
+    std::ifstream vocab_ifs(argv[3]);
     if(!vocab_ifs) {
-        std::cerr << "Error opening vocabulary file: " << argv[1] << std::endl;
+        std::cerr << "Error opening vocabulary file: " << argv[3] << std::endl;
         return -1;
     }
     auto vocab = load_vocab(vocab_ifs);
@@ -41,9 +45,9 @@ int main(int argc, char **argv)
     struct hacoo_tensor *doc_tensor = hacoo_alloc(ngram_size, dims, 1024, 70);
 
     // Read the document file
-    std::ifstream doc_ifs(argv[3]);
+    std::ifstream doc_ifs(argv[4]);
     if(!doc_ifs) {
-        std::cerr << "Error opening document file: " << argv[3] << std::endl;
+        std::cerr << "Error opening document file: " << argv[4] << std::endl;
         hacoo_free(doc_tensor);
         return -1;
     }
@@ -59,5 +63,50 @@ int main(int argc, char **argv)
         hacoo_set(doc_tensor, indices, hacoo_get(doc_tensor, indices) + 1.0);
     }
 
-    print_tensor(doc_tensor);
+    // do the decomposition
+    double tol = 1e-5;
+    cpd_result_t *result= cpd(doc_tensor, rank, 1000, tol);
+
+    // write the files
+    for(unsigned int i=0; i < doc_tensor->ndims; ++i) {
+        std::string filename = "factor_mode_" + std::to_string(i) + ".tsv";
+        write_tsv_matrix(filename, result->factors[i]);
+    }
+
+    // write the lambda values
+    {
+        std::string filename = "lambdas.tsv";
+        std::ofstream ofs(filename);
+        if(ofs) {
+            for(unsigned int i=0; i < result->rank; ++i) {
+                ofs << result->lambda[i] << "\n";
+            }
+            ofs.close();
+        } else {
+            std::cerr << "Error opening output file: " << filename << std::endl;
+        }
+    }
+
+    //clean up
+    hacoo_free(doc_tensor);
+    cpd_result_free(result);
+}
+
+void write_tsv_matrix(const std::string &filename, matrix_t *m)
+{
+    std::ofstream ofs(filename);
+    if(!ofs) {
+        std::cerr << "Error opening output file: " << filename << std::endl;
+        return;
+    }
+    for(unsigned int i=0; i < m->rows; ++i) {
+        for(unsigned int j=0; j < m->cols; ++j) {
+            ofs << m->data[i*m->cols + j];
+            if(j < m->cols - 1) {
+                ofs << "\t";
+            }
+        }
+        ofs << "\n";
+    }
+    ofs.close();
 }
