@@ -62,6 +62,8 @@ struct hacoo_tensor *read_tensor_file(FILE *file);
 /* Delete this later */
 struct hacoo_tensor *read_tensor_file_with_base(FILE *file, int zero_base);
 
+struct hacoo_tensor *read_tensor_file_with_base_fast(FILE *file, int zero_base, size_t nnz_estimate);
+
 /* Initialize a tensor from a file */
 struct hacoo_tensor *file_init(FILE *file);
 

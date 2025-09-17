@@ -73,6 +73,8 @@ tensors/enron.tns
 tensors/lbnl.tns
 tensors/nips.tns
 tensors/nell-2.tns
+tensors/nell-1.tns
+tensors/deli.tns
 
 #ignore large verify_mttkrp files
 verify_mttkrp/enron*

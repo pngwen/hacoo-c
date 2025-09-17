@@ -354,6 +354,84 @@ struct hacoo_tensor *file_init(FILE *file) {
   return t;
 }
 
+struct hacoo_tensor *read_tensor_file_with_base_fast(FILE *file, int zero_base, size_t nnz_estimate)
+{
+    char line[4096]; // adjust if tensor has many modes
+    unsigned int ndims = 0;
+    unsigned int *dims = NULL;
+    struct hacoo_tensor *t = NULL;
+
+    // --- Read first line to get tensor dimensions ---
+    if (!fgets(line, sizeof(line), file)) {
+        fprintf(stderr, "Error: Failed to read tensor dimensions.\n");
+        return NULL;
+    }
+
+    // Count number of dimensions
+    char *p = line;
+    while (*p) {
+        if (*p == ' ') ndims++;
+        p++;
+    }
+    ndims++; // last number
+
+    dims = (unsigned int *)malloc(ndims * sizeof(unsigned int));
+    if (!dims) {
+        fprintf(stderr, "Error: Failed to allocate dims.\n");
+        return NULL;
+    }
+
+    // Parse dimensions
+    p = line;
+    for (unsigned int i = 0; i < ndims; i++) {
+        dims[i] = strtoul(p, &p, 10);
+    }
+
+    // --- Compute number of buckets ---
+    size_t nbuckets = 1ULL << (size_t)ceil(log2((double)nnz_estimate / 0.7));
+
+    // Allocate tensor
+    t = hacoo_alloc(ndims, dims, nbuckets, LOAD);
+    free(dims);
+
+    // Allocate reusable arrays for indices
+    int index_int[ndims];
+    unsigned int index_u[ndims];
+
+    // --- Read tensor entries ---
+   while (fgets(line, sizeof(line), file)) {
+    if (line[0] == '\0' || line[0] == '\n' || line[0] == '#') continue;
+    
+    char *p = line;
+    unsigned int parsed = 0;
+    for (unsigned int i = 0; i < ndims; i++) {
+        index_int[i] = (int) strtol(p, &p, 10);
+        parsed++;
+    }
+
+    double value = strtod(p, &p);
+    parsed++;
+
+    if (parsed != ndims + 1) {
+        fprintf(stderr, "Error: Line does not have expected %u entries: %s\n", ndims + 1, line);
+        continue;
+    }
+
+    // adjust for 1-based indexing
+    if (!zero_base) {
+        for (unsigned int i = 0; i < ndims; i++) index_int[i]--;
+    }
+
+    for (unsigned int i = 0; i < ndims; i++) index_u[i] = (unsigned int) index_int[i];
+
+    hacoo_set(t, index_u, value);
+    }
+
+
+    return t;
+}
+
+
 /* Read an entry from a file */
 void file_entry(struct hacoo_tensor *t, FILE *file) {
 
