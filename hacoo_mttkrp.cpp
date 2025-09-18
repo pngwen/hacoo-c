@@ -22,10 +22,10 @@ mttkrp_func_t selected_mttkrp_func;
 void print_usage(const char *progname);
 
 /* Functions for benchmarking MTTRKP */
-int suite_bench_init(const char *tensor_filename, int zero_base, int rank);
+int suite_bench_init(const char *tensor_filename, int zero_base, int rank, int nnz);
 int generate_factor_matrices();
 void CUnit_mttkrp_bench(const char *tensor_file, int alg, int zero_base,
-                        int target_mode, int rank, int num_threads, int num_iterations);
+                        int target_mode, int rank, int num_threads, int num_iterations, int nnz);
 int suite_cleanup(void);
 
 /* Globals */
@@ -38,15 +38,16 @@ char *global_mttkrp_expected_file = NULL;
 
 
 /* CUnit test to verify if this libary's MTTKRP answers are correct */
-int suite_verify_init(const char *tensor_filename, const char *factor_filename, const char *mttkrp_filename, int zero_base);
+int suite_verify_init(const char *tensor_filename, const char *factor_filename, const char *mttkrp_filename, int zero_base, int nnz);
 void verify_mttkrp();
-void CUnit_verify_mttkrp(const char *tensor_file, const char *factor_file, const char *mttkrp_file, int alg, int zero_base);
+void CUnit_verify_mttkrp(const char *tensor_file, const char *factor_file, const char *mttkrp_file, int alg, int zero_base,int nnz);
 matrix_t **get_mttkrp_results(struct hacoo_tensor *t, matrix_t **factor_matrices, int matrix_count, mttkrp_func_t f);
 
 void print_usage(const char *progname) {
     printf("Usage: %s [OPTIONS]\n", progname);
     printf("Options:\n");
     printf("  -i or --input          Input tensor file (.tns)\n");
+    printf("  -v or --nnz           NUmber of nonzeros\n");
     printf("  -f or --factors        Path to factor matrices\n");
     printf("  -e or --expected       Path to expected MTTKRP answers\n");
     printf("  -z or --zero-based     Assume input tensor is zero-based (default: one-based)\n");
@@ -75,12 +76,14 @@ int main(int argc, char *argv[]) {
     int run_bench = 0;
     int num_threads = 1;
 	int num_iterations = 1;
+	int nnz = 128;
 
     int opt;
-	const char* const short_opt = "hi:za:r:m:d:bt:f:e:n:";  // added n:
+	const char* const short_opt = "hi:v:za:r:m:d:bt:f:e:n:";
 	static struct option long_options[] = {
 		{"help",        no_argument,       0, 'h'},
 		{"input",       required_argument, 0, 'i'},
+		{"nnz",         required_argument, 0, 'v'},
 		{"factors",     required_argument, 0, 'f'},
 		{"expected-mttkrp", required_argument, 0, 'e'},
 		{"zero-based",  no_argument,       0, 'z'},
@@ -102,6 +105,9 @@ int main(int argc, char *argv[]) {
                 exit(0);
             case 'i':
                 tensor_file = optarg;
+                break;
+            case 'v':
+                nnz = atoi(optarg);
                 break;
             case 'f':
                 global_factor_file = optarg;
@@ -156,22 +162,22 @@ int main(int argc, char *argv[]) {
     omp_set_num_threads(num_threads);
     openblas_set_num_threads(num_threads);
 	if (run_bench) {
-		CUnit_mttkrp_bench(tensor_file, algorithm, zero_base, target_mode, rank, num_threads,num_iterations);
+		CUnit_mttkrp_bench(tensor_file, algorithm, zero_base, target_mode, rank, num_threads,num_iterations, nnz);
 	} else {
 		rank = 4;
 		printf("Verifying MTTKRP answers.\nTensor: %s\nRank automatically set to 4.\n", tensor_file);
-		CUnit_verify_mttkrp(tensor_file, global_factor_file, global_mttkrp_expected_file, algorithm, zero_base);
+		CUnit_verify_mttkrp(tensor_file, global_factor_file, global_mttkrp_expected_file, algorithm, zero_base,nnz);
 	}
 
     return 0;
 }
 
 void CUnit_mttkrp_bench(const char *tensor_file, int alg, int zero_base,
-                        int target_mode, int rank, int num_threads, int num_iterations) {
+                        int target_mode, int rank, int num_threads, int num_iterations, int nnz) {
     // Initialize CUnit
     CU_initialize_registry();
     
-    if (suite_bench_init(tensor_file, zero_base, rank)) {
+    if (suite_bench_init(tensor_file, zero_base, rank,nnz)) {
         fprintf(stderr, "Suite initialization failed.\n");
         CU_cleanup_registry();
         return;
@@ -262,7 +268,7 @@ void CUnit_mttkrp_bench(const char *tensor_file, int alg, int zero_base,
 }
 
 /* Suite initialization: read all input files */
-int suite_bench_init(const char *tensor_filename, int zero_base, int rank) {
+int suite_bench_init(const char *tensor_filename, int zero_base, int rank, int nnz) {
 
     // Read tensor
     FILE *file = fopen(tensor_filename, "r");
@@ -270,7 +276,7 @@ int suite_bench_init(const char *tensor_filename, int zero_base, int rank) {
         perror("Error opening tensor file");
         exit(1);
     }
-    global_tensor = read_tensor_file_with_base(file, zero_base);
+    global_tensor = read_tensor_file_with_base_fast(file, zero_base, nnz);
     fclose(file);
     if (!global_tensor) return 1;
 
@@ -297,10 +303,10 @@ int suite_bench_init(const char *tensor_filename, int zero_base, int rank) {
 
 
 /* Verify if computed answers are equal to matlab's */
-void CUnit_verify_mttkrp(const char *tensor_file, const char *factor_file, const char *mttkrp_file, int alg,int zero_base) {
+void CUnit_verify_mttkrp(const char *tensor_file, const char *factor_file, const char *mttkrp_file, int alg,int zero_base,int nnz) {
     CU_initialize_registry();
 
-    if (suite_verify_init(tensor_file, factor_file, mttkrp_file,zero_base)) {
+    if (suite_verify_init(tensor_file, factor_file, mttkrp_file,zero_base,nnz)) {
         fprintf(stderr, "Suite initialization failed.\n");
         CU_cleanup_registry();
         return;
@@ -386,7 +392,7 @@ matrix_t **get_mttkrp_results(struct hacoo_tensor *t, matrix_t **factor_matrices
 }
 
 /* Suite initialization for verify MTTKRP: read all input files */
-int suite_verify_init(const char *tensor_filename, const char *factor_filename, const char *mttkrp_filename, int zero_base) {
+int suite_verify_init(const char *tensor_filename, const char *factor_filename, const char *mttkrp_filename, int zero_base,int nnz) {
 
     // Read tensor
     FILE *file = fopen(tensor_filename, "r");
@@ -394,7 +400,7 @@ int suite_verify_init(const char *tensor_filename, const char *factor_filename, 
         perror("Error opening tensor file");
         exit(1);
     }
-    global_tensor = read_tensor_file_with_base(file, zero_base);
+    global_tensor = read_tensor_file_with_base_fast(file, zero_base, nnz);
     fclose(file);
     if (!global_tensor) return 1;
 
