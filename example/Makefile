@@ -1,4 +1,4 @@
-ALL=vocab docpd-hacoo
+ALL=vocab docpd-hacoo doccoo
 LD=g++
 CC=g++
 CXX=g++
@@ -9,6 +9,8 @@ all: $(ALL)
 vocab: vocab.o tokenize.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 docpd-hacoo: docpd-hacoo.o tokenize.o ../alto.o ../hacoo.o ../matrix.o ../cpd.o ../mttkrp.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
+doccoo: doccoo.o tokenize.o ../alto.o ../hacoo.o ../matrix.o ../cpd.o ../mttkrp.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
 
 clean:
