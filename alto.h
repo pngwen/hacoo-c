@@ -26,8 +26,8 @@ void morton_setup(struct hacoo_tensor *at);
 LIT alto_pack_index(const unsigned int *coords, const LIT *ALTO_MASKS, int nmode);
 
 /* Unpack index */
-void alto_unpack(unsigned long long alto_idx,
-                 const unsigned long long* masks,
+void alto_unpack(LIT alto_idx,
+                 const LIT* masks,
                  int ndims,
                  unsigned int* out_indices);
 #endif
