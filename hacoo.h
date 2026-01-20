@@ -8,9 +8,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "vector.h"
+#include "common.cpp"
 
 struct hacoo_bucket {
-  unsigned long long morton;
+  LIT alto_idx;  // packed ALTO encoding
   double value;
 };
 
@@ -27,6 +28,11 @@ struct hacoo_tensor {
   unsigned int sy;
   unsigned int sz;
   //unsigned int base; //index base
+  LIT alto_mask;
+  LIT *mode_masks;            // gather/scatter masks (nmode)
+  #ifdef ALT_PEXT
+    int *mode_pos;              // starting point for each mode mask (nmode)
+  #endif
 };
 
 /* Allocation and deallocation functions */
@@ -40,10 +46,6 @@ void hacoo_rehash(struct hacoo_tensor **t);
 /* Access functions */
 void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value);
 double hacoo_get(struct hacoo_tensor *t, unsigned int *index);
-
-/* extract the index from a bucket */
-void hacoo_extract_index(struct hacoo_bucket *b, unsigned int n,
-                         unsigned int *index);
 
 /* Allocate a new bucket */
 struct hacoo_bucket *hacoo_new_bucket();
@@ -59,6 +61,8 @@ struct hacoo_tensor *read_tensor_file(FILE *file);
 
 /* Delete this later */
 struct hacoo_tensor *read_tensor_file_with_base(FILE *file, int zero_base);
+
+struct hacoo_tensor *read_tensor_file_with_base_fast(FILE *file, int zero_base, size_t nnz_estimate);
 
 /* Initialize a tensor from a file */
 struct hacoo_tensor *file_init(FILE *file);
