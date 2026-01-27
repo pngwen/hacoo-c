@@ -139,7 +139,7 @@ cpd_result_t *cpd(struct hacoo_tensor *t, unsigned int rank, unsigned int max_it
     cpd_result_t *result = cpd_alloc(t, rank);
     matrix_t *gram = new_matrix(rank, rank);
     matrix_t *grami = new_matrix(rank, rank);
-    double norm = frobenius_norm(t);
+    double norm = hacoo_frobenius_norm(t);
 
 
     // solve the CPD via ALS
@@ -148,7 +148,7 @@ cpd_result_t *cpd(struct hacoo_tensor *t, unsigned int rank, unsigned int max_it
         for (unsigned int mode = 0; mode < t->ndims; mode++)
         {
             // Compute MTTKRP for the current mode
-            matrix_t *mttkrp_result = mttkrp(t, result->factors, mode);
+            matrix_t *mttkrp_result = hacoo_mttkrp(t, result->factors, mode);
 
             // Compute the gram product and its inverse
             gram_product(gram, result->factors, t->ndims, mode);

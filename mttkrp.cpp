@@ -24,7 +24,8 @@ Returns:
 #include <stdio.h>
 #include <cblas.h>
 
-/* Parallel MTTKRP */matrix_t *mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
+/* HaCOO Parallel MTTKRP */
+matrix_t *hacoo_mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
 {
     unsigned int fmax = u[0]->cols;
 
@@ -85,7 +86,9 @@ Returns:
                 }
 
                 // Accumulate into the local result row using daxpy
-                cblas_daxpy(fmax, 1.0, rank_vec, 1, local_res->data + idx[n] * fmax, 1);
+                for (int f = 0; f < fmax; f++) {
+                    local_res->vals[idx[n]][f] += rank_vec[f];
+                }
             }
         }
 
@@ -120,7 +123,7 @@ Returns:
     return res;
 }
 
-matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
+matrix_t *hacoo_mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
 {
     unsigned int fmax = u[0]->cols;
     matrix_t *res = new_matrix(h->dims[n], fmax);
@@ -193,44 +196,4 @@ matrix_t *mttkrp_serial(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
     FREE(t);
 
     return res;
-}
-
-// function to test mttkrp
-void mttkrp_test(struct hacoo_tensor *t)
-{
-
-  // Create factor matrices
-  double a[] = {1, 3, 5, 2, 4, 6};
-
-  double b[] = {1, 4, 7, 2, 5, 8, 3, 6, 9};
-
-  double c[] = {1, 2, 3, 4, 5, 6};
-
-  // make an array of 3 matrices
-  int num_matrices = 3;
-
-  matrix_t **u = (matrix_t **)MALLOC(sizeof(matrix_t *) * num_matrices);
-
-  u[0] = array_to_matrix(a, 2, 3);
-  u[1] = array_to_matrix(b, 3, 3);
-  u[2] = array_to_matrix(c, 2, 3);
-
-  matrix_t *m;
-
-  for (int i = 0; i < num_matrices; i++)
-  {
-    m = mttkrp(t, u, i);
-    printf("\nMode-%d MTTKRP: \n", i);
-    print_matrix(m);
-  }
-
-  // free factor matrices
-  for (int i = 0; i < num_matrices; i++)
-  {
-    free_matrix(u[i]);
-  }
-  FREE(u);
-
-  // free m
-  free_matrix(m);
 }

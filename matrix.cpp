@@ -11,33 +11,39 @@
 #define EPSILON 1.0e-2
 
 matrix_t *new_matrix(unsigned int n_rows, unsigned int n_cols) {
-  matrix_t *A = (matrix_t *) malloc(sizeof(matrix_t));
-  if (!A) return NULL;
+    matrix_t *A = (matrix_t *) malloc(sizeof(matrix_t));
+    if (!A) return NULL;
 
-  A->rows = n_rows;
-  A->cols = n_cols;
+    A->rows = n_rows;
+    A->cols = n_cols;
 
-  // Allocate aligned memory for the data block
-  A->data = (double *) MALLOC(n_rows * n_cols * sizeof(double));
-  if (!A->data) {
-    FREE(A);
-    return NULL;
-  }
+    // Allocate aligned memory for the data block
+    A->data = (double *) MALLOC(n_rows * n_cols * sizeof(double));
+    if (!A->data) {
+        FREE(A);
+        return NULL;
+    }
 
-  // Allocate normal memory for the row pointers
-  A->vals = (double **) malloc(n_rows * sizeof(double *));
-  if (!A->vals) {
-    FREE(A->data);
-    FREE(A);
-    return NULL;
-  }
+    // ZERO-INITIALIZE the data block
+    for (unsigned int i = 0; i < n_rows * n_cols; i++) {
+        A->data[i] = 0.0;
+    }
 
-  for (unsigned int i = 0; i < n_rows; i++) {
-      A->vals[i] = &A->data[i * n_cols];
-  }
+    // Allocate normal memory for the row pointers
+    A->vals = (double **) malloc(n_rows * sizeof(double *));
+    if (!A->vals) {
+        FREE(A->data);
+        FREE(A);
+        return NULL;
+    }
 
-  return A;
+    for (unsigned int i = 0; i < n_rows; i++) {
+        A->vals[i] = &A->data[i * n_cols];
+    }
+
+    return A;
 }
+
 
 /* Generate a random matrix of a given size and value range */
 matrix_t* new_random_matrix(size_t rows, size_t cols, double min_value, double max_value) {

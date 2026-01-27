@@ -24,11 +24,11 @@ int main(int argc, char *argv[]) {
     }
   
     // Read the tensor
-    struct hacoo_tensor *t = read_tensor_file(file);
+    struct hacoo_tensor *t = hacoo_read_tensor_file(file);
     fclose(file);
   
     // Print tensor
-    print_tensor(t);
+    hacoo_print_tensor(t);
   
     // Free tensor
     hacoo_free(t);
