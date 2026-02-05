@@ -22,8 +22,13 @@ mttkrp_func_t selected_mttkrp_func;
 void print_usage(const char *progname);
 
 /* CUnit suite initialization and cleanup */
-int suite_verify_init(const char *tensor_filename, const char *factor_filename, const char *mttkrp_filename, int zero_base, int nnz);
-int suite_cleanup(void);
+int suite_verify_init(const char *tensor_filename, const char *factor_filename, const char *mttkrp_filename, int nnz);
+int suite_cleanup();
+
+/* CUnit test to verify if this libary's MTTKRP answers are correct */
+void verify_mttkrp();
+void CUnit_verify_mttkrp(const char *tensor_file, const char *output_filename, const char *factor_file, const char *mttkrp_file, int alg, int zero_base,int nnz);
+matrix_t **get_mttkrp_results(struct hacoo_tensor *t, matrix_t **factor_matrices, int matrix_count, mttkrp_func_t f);
 
 /* Globals */
 struct hacoo_tensor *global_tensor = NULL;
@@ -32,12 +37,6 @@ matrix_t **global_mttkrp_expected = NULL;
 int global_matrix_count = 0;
 char *global_factor_file = NULL;
 char *global_mttkrp_expected_file = NULL;
-
-
-/* CUnit test to verify if this libary's MTTKRP answers are correct */
-void verify_mttkrp();
-void CUnit_verify_mttkrp(const char *tensor_file, const char *factor_file, const char *mttkrp_file, int alg, int zero_base,int nnz);
-matrix_t **get_mttkrp_results(struct hacoo_tensor *t, matrix_t **factor_matrices, int matrix_count, mttkrp_func_t f);
 
 void print_usage(const char *progname) {
     printf("Usage: %s [OPTIONS]\n", progname);

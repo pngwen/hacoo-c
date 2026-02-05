@@ -39,8 +39,8 @@ matrix_t** copy_matrices(matrix_t **originals, size_t num_matrices);
 /* Print values of a matrix */
 void print_matrix(matrix_t *m);
 
-void print_matrices(matrix_t **matrices, int num_matrices);
-
+void write_matrix_to_file(const char* filename, matrix_t *m);
+  
 /* free matrix */
 void free_matrix(matrix_t *m);
 

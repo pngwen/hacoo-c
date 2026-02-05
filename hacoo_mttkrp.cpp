@@ -26,9 +26,8 @@ int suite_bench_init(const char *tensor_filename, int rank);
 int suite_cleanup();
 int generate_factor_matrices();
 
-/* Functions for benchmarking MTTRKP */
-void CUnit_mttkrp_bench(const char *tensor_file, int alg, int target_mode, 
-                        int rank, int num_threads, int num_iterations, int nnz);
+void CUnit_mttkrp_bench(const char *tensor_file, const char *output_file, int alg, int target_mode, 
+                        int rank, int num_threads, int num_iterations, int nnz, int run_bench);
 
 /* Globals */
 struct hacoo_tensor *global_tensor = NULL;
@@ -40,7 +39,7 @@ void print_usage(const char *progname) {
     printf("Options:\n");
     printf("  -i or --input          Input tensor file (.tns)\n");
     printf("  -o or --output         Output file name\n");
-    printf("  -m or --mode           Target mode (-1:loop all modesdefault; or specify a mode, e.g., 0 or 1 or 2 for third-order tensors.))\n");
+    printf("  -m or --mode           Target mode (-1:loop all modes, default; or specify a mode, e.g., 0 or 1 or 2 for third-order tensors.))\n");
     printf("  -s or --itrs           Number of iterations (1:default)\n");
     printf("  -d or --dev-id         MTTKRP algorithm (-2:sequential, default; -1:OpenMP parallel)\n");
     printf("  -r or --rank           Number of matrix columns (16:default)\n");
@@ -133,20 +132,17 @@ int main(int argc, char *argv[]) {
 
     omp_set_num_threads(num_threads);
     openblas_set_num_threads(num_threads);
-	if (run_bench) {
-		CUnit_mttkrp_bench(tensor_file, dev_id, target_mode, rank, num_threads, num_iterations, nnz);
-	} else {
-        // run mttkrp and write answer files
-    }
+    CUnit_mttkrp_bench(tensor_file, output_file, dev_id, target_mode, rank, num_threads, num_iterations, nnz, run_bench);
+
     return 0;
 }
 
-void CUnit_mttkrp_bench(const char *tensor_file, int alg,
-                        int target_mode, int rank, int num_threads, int num_iterations, int nnz) {
+void CUnit_mttkrp_bench(const char *tensor_file, const char *output_file, int alg,
+                        int target_mode, int rank, int num_threads, int num_iterations, int nnz, int run_bench) {
     // Initialize CUnit
     CU_initialize_registry();
     
-    if (suite_bench_init(tensor_file, rank,nnz)) {
+    if (suite_bench_init(tensor_file, rank)) {
         fprintf(stderr, "Suite initialization failed.\n");
         CU_cleanup_registry();
         return;
@@ -155,10 +151,10 @@ void CUnit_mttkrp_bench(const char *tensor_file, int alg,
     // Select MTTKRP implementation
     if (alg == -1) {
         selected_mttkrp_func = hacoo_mttkrp;
-        printf("Running Parallel MTTKRP Benchmark for %s.\n", tensor_file);
+        printf("Running Parallel MTTKRP for %s.\n", tensor_file);
     } else if (alg == -2) {
         selected_mttkrp_func = hacoo_mttkrp_serial;
-        printf("Running Serial MTTKRP Benchmark %s.\n", tensor_file);
+        printf("Running Serial MTTKRP for %s.\n", tensor_file);
     } else {
         fprintf(stderr, "Invalid value: %d. Expected -2 or -1.\n", alg);
         CU_cleanup_registry();
@@ -167,69 +163,93 @@ void CUnit_mttkrp_bench(const char *tensor_file, int alg,
 
 	printf("Rank: %d\n", rank);
 	printf("Threads: %d\n", num_threads);
-	if (target_mode == -1 ) 
-		printf("Target mode: all\n"); 
-	else 
-		printf("Mode: %d\n", target_mode);
-	printf("Iterations: %d (skipping first warm-up)\n", num_iterations);
+	if (target_mode == -1 ) { printf("Target mode: all\n"); }
+    else { printf("Mode: %d\n", target_mode); }
+
+    if(run_bench) { printf("Iterations: %d (skipping first warm-up)\n", num_iterations); }
 	printf("--------------------------------------------\n");
 
+    if(run_bench) { num_iterations++; }  // Increment to account for warm-up
+    struct timespec start, end;
+
     if (target_mode != -1) {
-        /* -------- Single mode benchmark -------- */
+        /* -------- Single mode -------- */
         double total_time = 0.0;
 
-        for (int it = 0; it < (num_iterations+1); ++it) {
-            struct timespec start, end;
+        for (int it = 0; it < num_iterations; ++it) {
             clock_gettime(CLOCK_MONOTONIC, &start);
 
             matrix_t *computed = selected_mttkrp_func(global_tensor, global_factors, target_mode);
 
-            clock_gettime(CLOCK_MONOTONIC, &end);
-            double duration = (end.tv_sec - start.tv_sec) +
-                              (end.tv_nsec - start.tv_nsec) / 1e9;
+            if(run_bench) {
+                clock_gettime(CLOCK_MONOTONIC, &end);
+                double duration = (end.tv_sec - start.tv_sec) +
+                                (end.tv_nsec - start.tv_nsec) / 1e9;
 
-            printf("Mode %d Iteration %d Time: %.9f seconds\n", target_mode, it, duration);
-
-            if (it > 0) total_time += duration;  // skip warmup
+                printf("Mode %d Iteration %d Time: %.9f seconds\n", target_mode, it, duration);
+                if (it > 0) total_time += duration;  // skip warmup
+            } else {
+                // write output to file
+                if (output_file) {
+                    char filename[256];
+                    snprintf(filename, sizeof(filename), "%s_mode_%d.txt", output_file, target_mode);
+                    write_matrix_to_file(filename, computed);
+                }
+            }
+            
             free_matrix(computed);
         }
 
-        double avg_time = total_time / (num_iterations);
-        printf("Mode %d MTTKRP Avg Time (excluding warm-up): %.9f seconds\n",
+        if(run_bench) {
+            double avg_time = total_time / (num_iterations);
+            printf("Mode %d MTTKRP Avg Time (excluding warm-up): %.9f seconds\n",
                target_mode, avg_time);
-
+        }
     } else {
-        /* -------- All modes benchmark -------- */
+        /* -------- All modes -------- */
         double grand_total = 0.0;
 
         for (int mode = 0; mode < global_tensor->ndims; ++mode) {
             double total_time_mode = 0.0;
 
-            for (int it = 0; it < (num_iterations+1); ++it) {
-                struct timespec start, end;
+            for (int it = 0; it < num_iterations; ++it) {
+
                 clock_gettime(CLOCK_MONOTONIC, &start);
 
                 matrix_t *computed = selected_mttkrp_func(global_tensor, global_factors, mode);
 
-                clock_gettime(CLOCK_MONOTONIC, &end);
-                double duration = (end.tv_sec - start.tv_sec) +
+                if(run_bench) {
+                    clock_gettime(CLOCK_MONOTONIC, &end);
+                    double duration = (end.tv_sec - start.tv_sec) +
                                   (end.tv_nsec - start.tv_nsec) / 1e9;
 
-                printf("Mode %d Iteration %d Time: %.9f seconds\n", mode, it, duration);
-
-                if (it > 0) total_time_mode += duration;  // skip warmup
+                    printf("Mode %d Iteration %d Time: %.9f seconds\n", mode, it, duration);
+                    if (it > 0) total_time_mode += duration;  // skip warmup
+                } else {
+                    // write output to file
+                    if (output_file) {
+                        char filename[256];
+                        snprintf(filename, sizeof(filename), "%s_mode_%d.txt", output_file, mode);
+                        write_matrix_to_file(filename, computed);
+                    }
+                }
+                
                 free_matrix(computed);
             }
 
-            double avg_time_mode = total_time_mode / (num_iterations);
-            grand_total += avg_time_mode;
-            printf("Mode %d MTTKRP Avg Time (excluding warm-up): %.9f seconds\n",
-                   mode, avg_time_mode);
+            if(run_bench) {
+                double avg_time_mode = total_time_mode / (num_iterations-1);
+                grand_total += avg_time_mode;
+                printf("Mode %d MTTKRP Avg Time (excluding warm-up): %.9f seconds\n",
+                    mode, avg_time_mode);
+            }
         }
 
-        double overall_avg = grand_total / global_tensor->ndims;
-        printf("Overall Average MTTKRP Time across %d modes: %.9f seconds\n",
+        if(run_bench) {
+            double overall_avg = grand_total / global_tensor->ndims;
+            printf("Overall Average MTTKRP Time across %lu modes: %.9f seconds\n",
                global_tensor->ndims, overall_avg);
+        }
     }
 
     suite_cleanup();
@@ -279,10 +299,6 @@ int suite_cleanup() {
     if (global_factors) {
         free_matrices(global_factors, global_matrix_count);
         global_factors = NULL;
-    }
-    if (global_mttkrp_expected) {
-        free_matrices(global_mttkrp_expected, global_matrix_count);
-        global_mttkrp_expected = NULL;
     }
     global_matrix_count = 0;
 

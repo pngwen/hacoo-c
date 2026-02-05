@@ -25,6 +25,10 @@ Returns:
 #include <cblas.h>
 
 /* HaCOO Parallel MTTKRP */
+#include <cblas.h>   // OpenBLAS C interface
+#include <omp.h>
+#include <stdlib.h>
+
 matrix_t *hacoo_mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
 {
     unsigned int fmax = u[0]->cols;
@@ -33,18 +37,12 @@ matrix_t *hacoo_mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
     matrix_t *res = new_matrix(h->dims[n], fmax);
 
     int num_threads = omp_get_max_threads();
-
-    matrix_t **partials = (matrix_t **) MALLOC(num_threads * sizeof(matrix_t *));
+    matrix_t **partials = (matrix_t **) malloc(num_threads * sizeof(matrix_t *));
 
     #pragma omp parallel
     {
         int tid = omp_get_thread_num();
         int nthreads = omp_get_num_threads();
-        int nnz_counter = 0;
-
-        //if (tid == 0) {
-            //printf("Number of threads: %d\n", nthreads);
-        //}
 
         partials[tid] = new_matrix(h->dims[n], fmax);
         matrix_t *local_res = partials[tid];
@@ -56,19 +54,14 @@ matrix_t *hacoo_mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
         unsigned int *idx = (unsigned int *) malloc(h->ndims * sizeof(unsigned int));
         double *rank_vec = (double *) malloc(fmax * sizeof(double));
 
-        // Loop over assigned bucket vectors
         for (int i = start; i < end; i++) {
             bucket_vector *vec = &h->buckets[i];
-            if (vec->size == 0)
-                continue;
+            if (vec->size == 0) continue;
 
             for (size_t j = 0; j < vec->size; j++) {
-                nnz_counter++;
                 struct hacoo_bucket *cur = &vec->data[j];
 
-                // Get full index array from compressed HaCOO format
-
-                // Get full index array from compressed ALTO format
+                // Unpack indices from HaCOO format
                 alto_unpack(cur->alto_idx, h->mode_masks, h->ndims, idx);
 
                 // Initialize rank vector with cur->value
@@ -76,7 +69,7 @@ matrix_t *hacoo_mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
                     rank_vec[f] = cur->value;
                 }
 
-                // Multiply by the appropriate row from each factor matrix, skipping mode n
+                // Multiply by factor matrices (skipping mode n)
                 for (int d = 0; d < h->ndims; d++) {
                     if (d == n) continue;
                     double *vec_d = u[d]->vals[idx[d]];
@@ -85,19 +78,16 @@ matrix_t *hacoo_mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
                     }
                 }
 
-                // Accumulate into the local result row using daxpy
-                for (int f = 0; f < fmax; f++) {
-                    local_res->vals[idx[n]][f] += rank_vec[f];
-                }
+                // Accumulate into local result using BLAS
+                cblas_daxpy(fmax, 1.0, rank_vec, 1, local_res->vals[idx[n]], 1);
             }
         }
 
-        free(rank_vec); // Free thread-local buffer
+        free(rank_vec);
         free(idx);
     }
 
-    // Merge all thread-local results into the global result
-    /* Parallel over threads */
+    // Merge thread-local results into global matrix
     #pragma omp parallel
     {
         int tid = omp_get_thread_num();
@@ -106,10 +96,8 @@ matrix_t *hacoo_mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
         int end = (start + chunk > h->dims[n]) ? h->dims[n] : start + chunk;
 
         for (int i = start; i < end; i++) {
-            for (int f = 0; f < fmax; f++) {
-                for (int t = 0; t < num_threads; t++) {
-                    res->vals[i][f] += partials[t]->vals[i][f];
-                }
+            for (int t = 0; t < num_threads; t++) {
+                cblas_daxpy(fmax, 1.0, partials[t]->vals[i], 1, res->vals[i], 1);
             }
         }
     }
@@ -117,8 +105,7 @@ matrix_t *hacoo_mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
     for (int t = 0; t < num_threads; t++) {
         free_matrix(partials[t]);
     }
-
-    FREE(partials);
+    free(partials);
 
     return res;
 }

@@ -18,6 +18,11 @@ int main(int argc, char *argv[]) {
     openblas_set_num_threads(omp_get_max_threads()); 
 
     FILE *file = fopen(argv[1], "r");
+
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <tensor_file>\n", argv[0]);
+        return -1;
+    }
   
     if (!file) {
       perror("Error opening file");
@@ -66,7 +71,7 @@ void hacoo_mttkrp_test(struct hacoo_tensor *t)
 
   for (int i = 0; i < num_matrices; i++)
   {
-    m = hacoo_mttkrp_debug(t, u, i);
+    m = hacoo_mttkrp(t, u, i);
     printf("\nMode-%d MTTKRP: \n", i);
     print_matrix(m);
   }

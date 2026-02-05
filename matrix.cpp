@@ -143,24 +143,25 @@ void print_matrix(matrix_t *m) {
   printf("\n");
 }
 
-/*print multiple matrices */
-void print_matrices(matrix_t **matrices, int num_matrices) {
-  for (int i = 0; i < num_matrices; i++) {
-    printf("Matrix %d (%d x %d):\n", i + 1, matrices[i]->rows,
-           matrices[i]->cols); // print with dimensions
-    matrix_t *m = matrices[i]; // Get the matrix pointer
-
-    // Print each matrix
-    for (int x = 0; x < m->rows; x++) {
-      if (x != 0) {
-        printf("%s", "\n");
-      }
-      for (int y = 0; y < m->cols; y++) {
-        printf("%f\t", m->vals[x][y]);
-      }
+void write_matrix_to_file(const char* filename, matrix_t *m) {
+    FILE *file = fopen(filename, "w");
+    if (!file) {
+        perror("Error opening file for writing");
+        return;
     }
-    printf("\n\n"); // Adding a space between matrices for clarity
-  }
+
+    // Write matrix dimensions
+    fprintf(file, "%u %u\n", m->rows, m->cols);
+
+    // Write matrix data
+    for (unsigned int i = 0; i < m->rows; i++) {
+        for (unsigned int j = 0; j < m->cols; j++) {
+            fprintf(file, "%.6f ", m->vals[i][j]);
+        }
+        fprintf(file, "\n");
+    }
+
+    fclose(file);
 }
 
 /* Free a single matrix */
