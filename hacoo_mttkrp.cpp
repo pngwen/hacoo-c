@@ -22,11 +22,11 @@ mttkrp_func_t selected_mttkrp_func;
 void print_usage(const char *progname);
 
 /* CUnit suite initialization and cleanup */
-int suite_bench_init(const char *tensor_filename, int rank);
+int suite_bench_init(const char *tensor_filename, const char *extension, int rank);
 int suite_cleanup();
 int generate_factor_matrices();
 
-void CUnit_mttkrp_bench(const char *tensor_file, const char *output_file, int alg, int target_mode, 
+void CUnit_mttkrp_bench(const char *tensor_file, const char *extension, const char *output_file, int alg, int target_mode, 
                         int rank, int num_threads, int num_iterations, int nnz, int run_bench);
 
 /* Globals */
@@ -37,7 +37,7 @@ int global_matrix_count = 0;
 void print_usage(const char *progname) {
     printf("Usage: %s [OPTIONS]\n", progname);
     printf("Options:\n");
-    printf("  -i or --input          Input tensor file (.tns)\n");
+    printf("  -i or --input          Input tensor file (.tns or .hacoo)\n");
     printf("  -o or --output         Output file name\n");
     printf("  -m or --mode           Target mode (-1:loop all modes, default; or specify a mode, e.g., 0 or 1 or 2 for third-order tensors.))\n");
     printf("  -s or --itrs           Number of iterations (1:default)\n");
@@ -57,6 +57,7 @@ int main(int argc, char *argv[]) {
 
     char *tensor_file = NULL;
     char *output_file = NULL;
+    char extension[10] = "tns"; // default COO file type
     int dev_id = -2; //default sequential
     int rank = 16;
     int target_mode = -1; //default all modes
@@ -130,19 +131,26 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
+    //determine file type (whatever's after the .)
+    const char *ext = strrchr(tensor_file, '.');
+    if (ext != NULL && ext != tensor_file) {
+        strncpy(extension, ext + 1, sizeof(extension) - 1);
+        extension[sizeof(extension) - 1] = '\0';
+    }
+
     omp_set_num_threads(num_threads);
     openblas_set_num_threads(num_threads);
-    CUnit_mttkrp_bench(tensor_file, output_file, dev_id, target_mode, rank, num_threads, num_iterations, nnz, run_bench);
+    CUnit_mttkrp_bench(tensor_file, extension, output_file, dev_id, target_mode, rank, num_threads, num_iterations, nnz, run_bench);
 
     return 0;
 }
 
-void CUnit_mttkrp_bench(const char *tensor_file, const char *output_file, int alg,
+void CUnit_mttkrp_bench(const char *tensor_file, const char *extension,  const char *output_file, int alg,
                         int target_mode, int rank, int num_threads, int num_iterations, int nnz, int run_bench) {
     // Initialize CUnit
     CU_initialize_registry();
     
-    if (suite_bench_init(tensor_file, rank)) {
+    if (suite_bench_init(tensor_file, extension, rank)) {
         fprintf(stderr, "Suite initialization failed.\n");
         CU_cleanup_registry();
         return;
@@ -257,7 +265,7 @@ void CUnit_mttkrp_bench(const char *tensor_file, const char *output_file, int al
 }
 
 /* Suite initialization: read all input files */
-int suite_bench_init(const char *tensor_filename, int rank) {
+int suite_bench_init(const char *tensor_filename, const char *extension, int rank) {
 
     // Read tensor
     FILE *file = fopen(tensor_filename, "r");
@@ -265,7 +273,12 @@ int suite_bench_init(const char *tensor_filename, int rank) {
         perror("Error opening tensor file");
         exit(1);
     }
-    global_tensor = hacoo_read_tensor_file(file);
+
+    if (strcmp(extension, "tns") == 0) {
+        global_tensor = hacoo_read_tensor_file(file);
+    } else { //assume extension .hacoo
+        global_tensor = hacoo_read_htensor_file(file);
+    }
     fclose(file);
     if (!global_tensor) return 1;
 

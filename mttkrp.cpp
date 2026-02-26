@@ -24,11 +24,7 @@ Returns:
 #include <stdio.h>
 #include <cblas.h>
 
-/* HaCOO Parallel MTTKRP */
-#include <cblas.h>   // OpenBLAS C interface
-#include <omp.h>
-#include <stdlib.h>
-
+/* Parallel MTTKRP */
 matrix_t *hacoo_mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
 {
     unsigned int fmax = u[0]->cols;
@@ -52,7 +48,6 @@ matrix_t *hacoo_mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
         int end = (start + chunk > h->nbuckets) ? h->nbuckets : start + chunk;
 
         unsigned int *idx = (unsigned int *) malloc(h->ndims * sizeof(unsigned int));
-        double *rank_vec = (double *) malloc(fmax * sizeof(double));
 
         for (int i = start; i < end; i++) {
             bucket_vector *vec = &h->buckets[i];
@@ -61,29 +56,23 @@ matrix_t *hacoo_mttkrp(struct hacoo_tensor *h, matrix_t **u, unsigned int n)
             for (size_t j = 0; j < vec->size; j++) {
                 struct hacoo_bucket *cur = &vec->data[j];
 
-                // Unpack indices from HaCOO format
+                // Unpack indices from ALTO encoding
                 alto_unpack(cur->alto_idx, h->mode_masks, h->ndims, idx);
 
-                // Initialize rank vector with cur->value
+                double *out = local_res->vals[idx[n]];
+
                 for (int f = 0; f < fmax; f++) {
-                    rank_vec[f] = cur->value;
-                }
+                    double prod = cur->value;
 
-                // Multiply by factor matrices (skipping mode n)
-                for (int d = 0; d < h->ndims; d++) {
-                    if (d == n) continue;
-                    double *vec_d = u[d]->vals[idx[d]];
-                    for (int f = 0; f < fmax; f++) {
-                        rank_vec[f] *= vec_d[f];
+                    for (int d = 0; d < h->ndims; d++) {
+                        if (d == n) continue;
+                        prod *= u[d]->vals[idx[d]][f];
                     }
-                }
 
-                // Accumulate into local result using BLAS
-                cblas_daxpy(fmax, 1.0, rank_vec, 1, local_res->vals[idx[n]], 1);
+                    out[f] += prod;
+                }
             }
         }
-
-        free(rank_vec);
         free(idx);
     }
 

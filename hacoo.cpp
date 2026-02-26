@@ -83,8 +83,7 @@ error:
   return NULL;
 }
 
-void hacoo_free(struct hacoo_tensor *t)
-{
+void hacoo_free(struct hacoo_tensor *t) {
     if (!t) return;
 
     if (t->dims) {
@@ -99,10 +98,44 @@ void hacoo_free(struct hacoo_tensor *t)
 }
 
 /* Access functions */
-void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value)
-{
+void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value) {
 
   LIT alto_idx = alto_pack_index(index, t->mode_masks, t->ndims);
+  size_t i = hacoo_bucket_index(t, alto_idx);
+
+  bucket_vector *vec = &t->buckets[i];
+
+  // Search for existing bucket with same packed index 
+  struct hacoo_bucket *b = hacoo_search(vec, alto_idx);
+
+  // If not found, insert new bucket
+  if (!b) {
+    struct hacoo_bucket new_bucket;
+    new_bucket.alto_idx = alto_idx;
+    new_bucket.value = value;
+
+    bucket_vector_push_back(vec, new_bucket);
+    t->nnz++; // Increment number of nonzeros
+    return;
+  }
+
+  // If found, update value
+  b->value = value;
+
+  // Check if we need to rehash
+  if (t->nbuckets > 0 &&
+      ((double)t->nnz / (double)t->nbuckets) > ((double)t->load / 100.0)) {
+    hacoo_rehash(&t);
+    if (t == NULL) {
+      fprintf(stderr, "Rehash failed, exiting.\n");
+      return;
+    }
+  }
+}
+
+/* Set nonzero given alto_idx and value */
+void hacoo_hset(struct hacoo_tensor *t, LIT alto_idx, double value) {
+
   size_t i = hacoo_bucket_index(t, alto_idx);
 
   bucket_vector *vec = &t->buckets[i];
@@ -291,7 +324,7 @@ void hacoo_read_entry(struct hacoo_tensor *t)
   hacoo_file_entry(t, stdin);
 }
 
-/* Read a tensor from a tns file */
+/* Read a tensor from a tns file in COO format */
 struct hacoo_tensor *hacoo_read_tensor_file(FILE *file)
 {
   struct hacoo_tensor *t = hacoo_file_init(file);
@@ -363,6 +396,85 @@ void hacoo_file_entry(struct hacoo_tensor *t, FILE *file) {
 
   /* insert the value */
   hacoo_set(t, index, value);
+}
+
+/* Read a tensor file in HaCOO format */
+struct hacoo_tensor *hacoo_read_htensor_file(FILE *file) {
+  
+  struct hacoo_tensor *t = hacoo_hfile_init(file);
+
+  while(!feof(file)) {
+    hacoo_hfile_entry(t, file);
+  }
+
+  return t;
+}
+
+
+/* Initialize a tensor from a file in HaCOO format */
+struct hacoo_tensor *hacoo_hfile_init(FILE *file) {
+
+    char buffer[1024];
+
+    //read number of buckets
+    if (fgets(buffer, sizeof(buffer), file) == NULL)
+        return NULL;
+
+    unsigned int numberOfBuckets = (unsigned int) strtoul(buffer, NULL, 10);
+
+    //read dimensions line
+    fgets(buffer, sizeof(buffer), file);
+
+    // Count the number of integers in the line
+    unsigned int count = 0;
+    for (char *p = buffer; *p; p++) {
+        if (*p == ' ')
+        count++;
+    }
+    count++;
+
+    // Allocate memory for the array of dimensions
+    unsigned int *dims = (unsigned int *) MALLOC(count * sizeof(unsigned int));
+    if (!dims)
+        return NULL;
+
+    // Parse the input line and store integers in the array
+    char *token = strtok(buffer, " ");
+    for (unsigned int i = 0; i < count; i++) {
+        dims[i] = strtoul(token, NULL, 10);
+        token = strtok(NULL, " ");
+    } 
+
+    struct hacoo_tensor *t = hacoo_alloc(count, dims, numberOfBuckets, LOAD);
+
+    FREE(dims);
+
+  return t;
+}
+
+
+/* Read an entry from a HaCOO format file */
+void hacoo_hfile_entry(struct hacoo_tensor *t, FILE *file) {
+
+  double value;
+  LIT alto_idx = (LIT) malloc(sizeof(LIT));
+  if (!alto_idx) {
+    fprintf(stderr, "Error: Failed to allocate memory for ALTO index.\n");
+    return;
+  }
+
+  /* read alto index */
+  unsigned long tmp;
+  fscanf(file, "%lu", &tmp);
+  alto_idx = (LIT) tmp;
+
+  /* read the value */
+  if (feof(file))
+    return;
+  fscanf(file, "%lf", &value);
+
+  /* insert the value */
+  hacoo_hset(t, alto_idx, value);
 }
 
 /* Print out information about the tensor */

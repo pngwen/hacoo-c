@@ -3,7 +3,8 @@
 # Script to be run on a list of tensors using benchmark_all_tensors.slurm
 
 tensor="${TENSOR_NAME:-test2}"  # default to test2 if not set
-tensor_file="$HOME/haccoo-c/tensors/${tensor}.tns"
+#tensor_file="$HOME/haccoo-c/tensors/${tensor}.tns"
+tensor_file="$HOME/haccoo-c/tensors/${tensor}.hacoo"
 binary="$HOME/haccoo-c/hacoo_mttkrp"
 rank=10
 num_iterations=6

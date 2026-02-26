@@ -55,14 +55,20 @@ struct hacoo_tensor *hacoo_read_init();
 /* Read an entry from stdin */
 void hacoo_read_entry(struct hacoo_tensor *t);
 
-/* Read a tensor from a tns file */
+/* Read a tensor from a tns file in COO format */
 struct hacoo_tensor *hacoo_read_tensor_file(FILE *file);
 
-/* Initialize a tensor from a file */
+/* Initialize a tensor from a file in COO format */
 struct hacoo_tensor *hacoo_file_init(FILE *file);
 
-/* Read an entry from a file */
+/* Read an entry from a file in COO format */
 void hacoo_file_entry(struct hacoo_tensor *t, FILE *file);
+
+/* Read tensor file in HaCOO format */
+struct hacoo_tensor *hacoo_read_htensor_file(FILE *file);
+struct hacoo_tensor *hacoo_hfile_init(FILE *file);
+void hacoo_hfile_entry(struct hacoo_tensor *t, FILE *file);
+void hacoo_hset(struct hacoo_tensor *t, LIT alto_idx, double value);
 
 /* Print out information about the tensor */
 void hacoo_print_status(struct hacoo_tensor *t);

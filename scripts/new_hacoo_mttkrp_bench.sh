@@ -4,7 +4,8 @@
 tensor="${TENSOR_NAME:-test2}"  # default to test2 if not set
 num_nonzeros="${NUM_NONZEROS:-}" # optional
 
-tensor_file="$HOME/haccoo-c/tensors/${tensor}.tns"
+#tensor_file="$HOME/haccoo-c/tensors/${tensor}.tns"
+tensor_file="$HOME/haccoo-c/tensors/${tensor}.hacoo"
 binary="$HOME/haccoo-c/hacoo_mttkrp"
 rank=10
 num_iterations=6

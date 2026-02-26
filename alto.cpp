@@ -42,7 +42,6 @@ void alto_unpack(LIT alto_idx,
 // Achieving alto_bits_min requires packing/compression.
 void alto_setup(struct hacoo_tensor *at, PackOrder po, ModeOrder mo)
 {
-    printf("here\n");
     LIT* ALTO_MASKS = (LIT*)calloc(at->ndims, sizeof(LIT));
     assert(ALTO_MASKS);
 
