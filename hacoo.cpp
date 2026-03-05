@@ -382,11 +382,12 @@ void hacoo_file_entry(struct hacoo_tensor *t, FILE *file) {
     return;
   }
 
-  /* read the index- assumes indexes are 0-based */
+  /* read the index- assumes indexes are 1-based */
   for (int i = 0; i < t->ndims; i++) {
     if (feof(file))
       return;
     fscanf(file, "%u", &index[i]);
+    index[i] -= 1;
   }
 
   /* read the value */

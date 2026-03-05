@@ -37,7 +37,7 @@ int global_matrix_count = 0;
 void print_usage(const char *progname) {
     printf("Usage: %s [OPTIONS]\n", progname);
     printf("Options:\n");
-    printf("  -i or --input          Input tensor file (.tns or .hacoo)\n");
+    printf("  -i or --input          Input tensor file (.tns or .hacoo); assumes indexes are 1-based\n");
     printf("  -o or --output         Output file name\n");
     printf("  -m or --mode           Target mode (-1:loop all modes, default; or specify a mode, e.g., 0 or 1 or 2 for third-order tensors.))\n");
     printf("  -s or --itrs           Number of iterations (1:default)\n");
