@@ -17,8 +17,8 @@ int main(int argc, char *argv[]) {
     omp_set_num_threads(omp_get_max_threads());
     openblas_set_num_threads(omp_get_max_threads());
 
-    if (argc != 3) {
-      printf("Usage: ./alto_encode_test <tensor_file> <index_base> (1 if it's zero based)\n");
+    if (argc != 2) {
+      printf("Usage: ./alto_encode_test <tensor_file>\n");
       return -1;
     }
 
@@ -28,18 +28,16 @@ int main(int argc, char *argv[]) {
       perror("Error opening file");
       return -1;
     }
-
-    int tensor_base = atoi(argv[2]);
   
     // Read the tensor
-    struct hacoo_tensor *t = read_tensor_file_with_base(file,tensor_base);
+    struct hacoo_tensor *t = hacoo_read_tensor_file(file);
     fclose(file);
   
     // Print tensor status
     //print_status(t);
 
     // Print tensor
-    print_tensor(t);
+    hacoo_print_tensor(t);
 
     // Free tensor
     hacoo_free(t);

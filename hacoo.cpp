@@ -116,21 +116,21 @@ void hacoo_set(struct hacoo_tensor *t, unsigned int *index, double value) {
 
     bucket_vector_push_back(vec, new_bucket);
     t->nnz++; // Increment number of nonzeros
+
+    // Check if we need to rehash
+    if (t->nbuckets > 0 &&
+        ((double)t->nnz / (double)t->nbuckets) > ((double)t->load / 100.0)) {
+      hacoo_rehash(&t);
+      if (t == NULL) {
+        fprintf(stderr, "Rehash failed, exiting.\n");
+        return;
+      }
+    }
     return;
   }
 
   // If found, update value
   b->value = value;
-
-  // Check if we need to rehash
-  if (t->nbuckets > 0 &&
-      ((double)t->nnz / (double)t->nbuckets) > ((double)t->load / 100.0)) {
-    hacoo_rehash(&t);
-    if (t == NULL) {
-      fprintf(stderr, "Rehash failed, exiting.\n");
-      return;
-    }
-  }
 }
 
 /* Set nonzero given alto_idx and value */
@@ -151,21 +151,21 @@ void hacoo_hset(struct hacoo_tensor *t, LIT alto_idx, double value) {
 
     bucket_vector_push_back(vec, new_bucket);
     t->nnz++; // Increment number of nonzeros
+
+    // Check if we need to rehash
+    if (t->nbuckets > 0 &&
+        ((double)t->nnz / (double)t->nbuckets) > ((double)t->load / 100.0)) {
+      hacoo_rehash(&t);
+      if (t == NULL) {
+        fprintf(stderr, "Rehash failed, exiting.\n");
+        return;
+      }
+    }
     return;
   }
 
   // If found, update value
   b->value = value;
-
-  // Check if we need to rehash
-  if (t->nbuckets > 0 &&
-      ((double)t->nnz / (double)t->nbuckets) > ((double)t->load / 100.0)) {
-    hacoo_rehash(&t);
-    if (t == NULL) {
-      fprintf(stderr, "Rehash failed, exiting.\n");
-      return;
-    }
-  }
 }
 
 void hacoo_rehash(struct hacoo_tensor **t)
@@ -197,10 +197,6 @@ void hacoo_rehash(struct hacoo_tensor **t)
       hacoo_set(dummy, index, b->value);
       nnz++;
     }
-  }
-
-  if ((*t)->nnz != nnz) {
-    printf("Something went wrong. Only %d nnz copied when there were originally %d nnz.\n", nnz, (*t)->nnz);
   }
 
   // Copy important fields

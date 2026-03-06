@@ -8,7 +8,7 @@ HEADERS = $(shell find . -name '.ccls-cache' -type d -prune -o -type f -name '*.
 
 all: main
 utility: convert_file
-debug: convert_hacoo_test read_hacoo_file hacoo_mttkrp_test hacoo_simple_mttkrp_test matrix_op_test alto_encode_test
+debug: convert_hacoo_test read_hacoo_file hacoo_mttkrp_test matrix_op_test alto_encode_test
 
 main: $(SRCS) $(HEADERS)
 	$(CC) $(CFLAGS) $(SRCS) -o "$@" $(LDLIBS)
@@ -33,10 +33,7 @@ convert_hacoo_test: debug/convert_hacoo_test.o hacoo.o matrix.o cpd.o mttkrp.o a
 read_hacoo_file: debug/read_hacoo_file.o hacoo.o matrix.o mttkrp.o alto.o
 	$(CXX) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-hacoo_mttkrp_test: debug/hacoo_mttkrp_test.o hacoo.o matrix.o mttkrp.o alto.o
-	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
-
-hacoo_simple_mttkrp_test: debug/hacoo_simple_mttkrp_test.o hacoo.o matrix.o mttkrp.o alto.o
+hacoo_mttkrp_test: debug/hacoo_simple_mttkrp_test.o hacoo.o matrix.o mttkrp.o alto.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 matrix_op_test: debug/matrix_op_test.o matrix.o
